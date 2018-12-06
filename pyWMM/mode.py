@@ -29,7 +29,7 @@ class Mode:
     def __init__(self, Eps, Eps_cladding,
                  Ex = None, Ey, Ez = None, Er = None, Ephi = None,
                  Hx = None, Hy, Hz = None, Hr = None, Hphi = None,
-                 x = None, y, r = None,
+                 x = None, y, r = None, radius = None, center,
                  kVec, pol = None, wavelength = None, neff = None
                  ):
 
@@ -44,6 +44,9 @@ class Mode:
             self.coordinates = wmm.CARTESIAN
         else:
             raise ValueError('Invalid coordinate system defined!')
+
+        if self.coordinates = wmm.CYLINDRICAL and radius == None:
+            raise ValueError('Failed to specify the waveguide\'s center radius!')
 
         # Interpolate all of the fields on the given grid
         self.y = y
@@ -85,48 +88,54 @@ class Mode:
     	self.beta = None
     	self.k0   = None
     	self.neff = None
+        self.center = center
 
 	# field values at point (x, y)
-	# 	Fcomp: EX - HZ, SZ
+	# 	Fcomp: E, H, Eps
+    # returns a #D vector
 	def get_field(self, fComp, x, y, z):
 
-        # Convert the coordinate system if necesarry
-        if self.coordinates = wmm.CYLINDRICAL:
-            x = np.sqrt(x ** 2 + y ** 2)
+        #Extract center
+        centerX = self.center[0]
+        centerY = self.center[1]
+        centerZ = self.center[2]
 
         if fComp == wmm.E:
             if self.coordinates = wmm.CYLINDRICAL:
-                r = np.sqrt(x ** 2 + z ** 2)
-                Er   = self.Er(r,y)
-                Ey   = self.Ey(r,y)
-                Ephi = self.Ephi(r,y)
+                r = np.sqrt((x - centerX) ** 2 + (z - centerZ) ** 2)
+                Er   = self.Er(r,(y-centerY))
+                Ey   = self.Ey(r,(y-centerY))
+                Ephi = self.Ephi(r,(y-centerY))
                 Ex   = Er * np.sin(Ephi)
                 Ez   = Er * np.cos(Ephi)
             else:
-                Ex = self.Ex(x,y)
-                Ey = self.Ey(x,y)
-                Ez = self.Ez(x,y)
+                Ex = self.Ex((x-centerX),(y-centerY))
+                Ey = self.Ey((x-centerX),(y-centerY))
+                Ez = self.Ez((x-centerX),(y-centerY))
             E = np.array([Ex,Ey,Ez])
+            return E
         elif fComp == wmm.H:
             if self.coordinates = wmm.CYLINDRICAL:
-                r = np.sqrt(x ** 2 + z ** 2)
-                Hr   = self.Hr(r,y)
-                Hy   = self.Hy(r,y)
-                Hphi = self.Hphi(r,y)
+                r = np.sqrt((x - centerX) ** 2 + (z - centerZ) ** 2)
+                Hr   = self.Hr(r,(y-centerY))
+                Hy   = self.Hy(r,(y-centerY))
+                Hphi = self.Hphi(r,(y-centerY))
                 Hx   = Hr * np.sin(Hphi)
                 Hz   = Hr * np.cos(Hphi)
             else:
-                Hx = self.Hx(x,y)
-                Hy = self.Hy(x,y)
-                Hz = self.Hz(x,y)
+                Hx = self.Hx((x-centerX),(y-centerY))
+                Hy = self.Hy((x-centerX),(y-centerY))
+                Hz = self.Hz((x-centerX),(y-centerY))
             H = np.array([Hx,Hy,Hz])
-        elif fComp == wmm.eps:
-            return self.Ez(x,y)
-        elif fComp == wmm.Eps_cladding:
-            r = np.sqrt(x**2)
-            return self.Er(x,y)
+            return H
+        elif fComp == wmm.Eps:
+            if self.coordinates = wmm.CYLINDRICAL:
+                r = np.sqrt((x - centerX) ** 2 + (z - centerZ) ** 2)
+                Eps = self.Eps(r,(y-centerY))
+            else:
+                Eps = self.((x-centerX),(y-centerY))
         else
-            raise ValueError("Invalide component specified!")
+            raise ValueError("Invalid component specified!")
 
 	# longitudinal component of the Poyntingvector,
 	# integrated over the entire x-y-domain
@@ -157,6 +166,3 @@ class Mode:
             raise ValueError('Invalid coordinate system defined!')
         y0 = self.y[0]; y1 = self.y[-1];
         0.5 * integrate.dblquad(f, y0, y1, lambda x: x0, lambda x: x1)
-
-class Mode_Array():
-    return
