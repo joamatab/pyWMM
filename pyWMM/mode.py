@@ -26,7 +26,7 @@ from scipy import integrate
 '''
 class Mode:
 
-    def __init__(self, Eps, kVec, center,
+    def __init__(self, Eps, kVec, center, omega,
                  Ex = None, Ey = None, Ez = None, Er = None, Ephi = None,
                  Hx = None, Hy = None, Hz = None, Hr = None, Hphi = None,
                  x = None, y = None, r = None, radius = None,
@@ -51,31 +51,31 @@ class Mode:
         if self.coordinates == wmm.CARTESIAN:
             self.Eps_r          = interpolate.RectBivariateSpline(x, y, np.real(Eps))
             self.Eps_i          = interpolate.RectBivariateSpline(x, y, np.imag(Eps))
-            self.Eps = lambda x,y: self.Eps_r(x,y) + 1j*self.Eps_i(x,y)
+            self.Eps = lambda x,y: self.Eps_r(x,y,grid=False) + 1j*self.Eps_i(x,y,grid=True)
 
             self.Ex_r           = interpolate.RectBivariateSpline(x, y, np.real(Ex))
             self.Ex_i           = interpolate.RectBivariateSpline(x, y, np.imag(Ex))
-            self.Ex = lambda x,y: self.Ex_r(x,y) + 1j*self.Ex_i(x,y)
+            self.Ex = lambda x,y: self.Ex_r(x,y,grid=False) + 1j*self.Ex_i(x,y,grid=True)
 
             self.Ey_r           = interpolate.RectBivariateSpline(x, y, np.real(Ey))
             self.Ey_i           = interpolate.RectBivariateSpline(x, y, np.imag(Ey))
-            self.Ey = lambda x,y: self.Ey_r(x,y) + 1j*self.Ey_i(x,y)
+            self.Ey = lambda x,y: self.Ey_r(x,y,grid=False) + 1j*self.Ey_i(x,y,grid=True)
 
             self.Ez_r           = interpolate.RectBivariateSpline(x, y, np.real(Ez))
             self.Ez_i           = interpolate.RectBivariateSpline(x, y, np.imag(Ez))
-            self.Ez = lambda x,y: self.Ez_r(x,y) + 1j*self.Ez_i(x,y)
+            self.Ez = lambda x,y: self.Ez_r(x,y,grid=False) + 1j*self.Ez_i(x,y,grid=True)
 
             self.Hx_r           = interpolate.RectBivariateSpline(x, y, np.real(Hx))
             self.Hx_i           = interpolate.RectBivariateSpline(x, y, np.imag(Hx))
-            self.Hx = lambda x,y: self.Hx_r(x,y) + 1j*self.Hx_i(x,y)
+            self.Hx = lambda x,y: self.Hx_r(x,y,grid=False) + 1j*self.Hx_i(x,y,grid=True)
 
             self.Hy_r           = interpolate.RectBivariateSpline(x, y, np.real(Hy))
             self.Hy_i           = interpolate.RectBivariateSpline(x, y, np.imag(Hy))
-            self.Hy = lambda x,y: self.Hy_r(x,y) + 1j*self.Hy_i(x,y)
+            self.Hy = lambda x,y: self.Hy_r(x,y,grid=False) + 1j*self.Hy_i(x,y,grid=True)
 
             self.Hz_r           = interpolate.RectBivariateSpline(x, y, np.real(Hz))
             self.Hz_i           = interpolate.RectBivariateSpline(x, y, np.imag(Hz))
-            self.Hz = lambda x,y: self.Hz_r(x,y) + 1j*self.Hz_i(x,y)
+            self.Hz = lambda x,y: self.Hz_r(x,y,grid=False) + 1j*self.Hz_i(x,y,grid=True)
 
             self.x            = x
         elif self.coordinates == wmm.CYLINDRICAL:
@@ -91,15 +91,19 @@ class Mode:
             raise ValueError('Invalid coordinate system defined!')
 
         # Get the power of the modes
-        self.TEpower     = self.calc_TE_power()
-        self.TMpower     = self.calc_TM_power()
-        self.total_power = self.TEpower + self.TMpower
+        print('calculating TE power')
+        #self.calc_TE_power()
+        print('calculating TM power')
+        #self.calc_TM_power()
+        print('calculating total power')
+        #self.calc_total_power()
 
         # Get the normalizing factor
-        self.nrm    = 1
-        self.ampfac = np.sqrt(self.nrm)/np.sqrt(self.total_power)
-
+        #self.nrm    = 1
+        #self.ampfac = np.sqrt(self.nrm)/np.sqrt(self.total_power)
+        self.ampfac = 1
         #Initialize all the other variables
+        self.omega = omega
         self.pol  = None
         self.sym  = None
         self.beta = None
@@ -151,6 +155,7 @@ class Mode:
                 Eps = self.Eps(r,(y-centerY))
             else:
                 Eps = self.Eps((x-centerX),(y-centerY))
+            return Eps
         else:
             raise ValueError("Invalid component specified!")
 
@@ -160,26 +165,36 @@ class Mode:
     def calc_TE_power(self):
         if self.coordinates == wmm.CARTESIAN:
             f = lambda y, x: self.Ey(x,y) * self.Hx(x,y)
-            x0 = self.x[0]; x1 = self.x[-1];
+            xmin = self.x[0]; xmax = self.x[-1];
         elif self.coordinates == wmm.CYLINDRICAL:
             f = lambda y, r: self.Ey(x,y) * self.Hr(r,y)
-            x0 = self.r[0]; x1 = self.r[-1];
+            xmin = self.r[0]; xmax = self.r[-1];
         else:
             raise ValueError('Invalid coordinate system defined!')
-        y0 = self.y[0]; y1 = self.y[-1];
-        -0.5 * integrate.dblquad(f, y0, y1, lambda x: x0, lambda x: x1)
+        ymin = self.y[0]; ymax = self.y[-1];
+
+        intResults = wmm.complex_quadrature(f, xmin, xmax, ymin, ymax)
+        self.TE_power = -0.5 * intResults[0]
+        print(self.TE_power)
 
 	# longitudinal component of the Poyntingvector,
 	# integrated over the entire x-y-domain
 	# TM part
-    def calc_TM_power():
+    def calc_TM_power(self):
         if self.coordinates == wmm.CARTESIAN:
             f = lambda y, x: self.Ex(x,y) * self.Hy(x,y)
-            x0 = self.x[0]; x1 = self.x[-1];
+            xmin = np.min(self.x); xmax = np.min(self.x[-1]);
         elif self.coordinates == wmm.CYLINDRICAL:
             f = lambda y, r: self.Ex(x,y) * self.Hy(r,y)
-            x0 = self.r[0]; x1 = self.r[-1];
+            xmin = self.r[0]; xmax = self.r[-1];
         else:
             raise ValueError('Invalid coordinate system defined!')
-        y0 = self.y[0]; y1 = self.y[-1];
-        0.5 * integrate.dblquad(f, y0, y1, lambda x: x0, lambda x: x1)
+        ymin = np.min(self.y); ymax = np.min(self.y[-1]);
+
+        intResults = wmm.complex_quadrature(f, xmin, xmax, ymin, ymax)
+        self.TM_power = 0.5 * intResults[0]
+        print(self.TM_power)
+
+    def calc_total_power(self):
+        self.total_power = self.TM_power + self.TE_power
+        print(self.total_power)
