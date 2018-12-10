@@ -15,7 +15,7 @@ from scipy import integrate
 # Define constants
 # ---------------------------------------------------------------------------- #
 
-EPS0 = 8.854e-12
+EPS0 = 8.854e-12 * 1e-6
 MU0  = 4 * np.pi* 1e-7
 C0   = 299792458
 
@@ -31,13 +31,14 @@ Eps = 2
 # ---------------------------------------------------------------------------- #
 # Useful functions
 # ---------------------------------------------------------------------------- #
-def complex_quadrature(func, xmin, xmax, ymin, ymax,nx=1e3,ny=1e3, **kwargs):
+
+def complex_quadrature(func, xmin, xmax, ymin, ymax,nx=1e2,ny=1e2, **kwargs):
+    nx = int(nx); ny = int(ny);
     x = np.linspace(xmin,xmax,nx)
     y = np.linspace(ymin,ymax,ny)
-    z = func(x,y)
-    ans = np.simps(np.simps(z, y), x)
-    print('===================')
-    print(ans)
+    z = np.zeros((nx,ny),dtype=np.complex128)
+    z = func(y,x)
+    ans = np.trapz(np.trapz(z, x), y)
     return ans
 '''
 def complex_quadrature(func, xmin, xmax, ymin, ymax, **kwargs):
