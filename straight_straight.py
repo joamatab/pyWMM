@@ -9,10 +9,33 @@ from pyWMM import mode
 from pyWMM import CMT
 from scipy import integrate
 from scipy import io as sio
+
+# ---------------------------------------------------------------------------- #
+# Analytic solution
+# ---------------------------------------------------------------------------- #
+
+supermode_data = sio.loadmat('mode1_super.mat')
+singlemode_data = sio.loadmat('modesweep.mat')
+
+mode1_effective_index = supermode_data['effective_index'][0,0]
+mode2_effective_index = supermode_data['effective_index'][1,0]
+singlemode_effective_index = singlemode_data['effective_index'][0,0]
+
+wavelength = 1.55
+
+mode1_beta = 2 * np.pi * mode1_effective_index/ wavelength
+mode2_beta = 2 * np.pi * mode2_effective_index/ wavelength
+singlemode_beta = 2 * np.pi * singlemode_effective_index / wavelength
+
+dBeta = np.abs(np.pi * (mode1_effective_index - mode2_effective_index) / wavelength)
+
+L = np.linspace(0,15,200)
+coupler1_power = np.abs((np.cos(dBeta*L)) ) ** 2
+coupler2_power = np.abs((np.sin(dBeta*L)) ) ** 2
 # ---------------------------------------------------------------------------- #
 # Load in Mode data
 # ---------------------------------------------------------------------------- #
-format = 'python'
+format = 'matlab'
 if format == 'matlab':
     matfile = sio.loadmat('modesweep.mat')
     x = matfile['x'] * 1e6
@@ -86,17 +109,14 @@ wgRight = mode.Mode(Eps = Eps, kVec = kVec, center=centerRight, omega = omega,
 # ---------------------------------------------------------------------------- #
 # Define domain and problem
 # ---------------------------------------------------------------------------- #
-'''
-data = CMT.makeSupermode(wgLeft, wgRight, x, y)
-plt.imshow(np.real(CMT.makeSupermode(wgLeft, wgRight, x, y)))
-plt.show()
-
-quit()
-'''
+nRange  = 1e3
 modeList = [wgLeft,wgRight]
 zmin = 0; zmax = 15;
 xmin = -5; xmax = 5;
 ymin = -5;  ymax = 5;
+xRange = np.linspace(xmin,xmax,nRange)
+yRange = np.linspace(ymin,ymax,nRange)
+zRange = np.linspace(zmin,zmax,nRange)
 A0 = np.squeeze(np.array([1,0]))
 
 M = CMT.CMTsetup(modeList,xmin,xmax,ymin,ymax)
@@ -116,9 +136,49 @@ while r.successful() and r.t < zmax:
     r.integrate(r.t+dt)
     z.append(r.t)
     y.append(r.y)
-print(np.abs(y) ** 2)
-plt.plot(z,np.abs(y) ** 2)
-plt.show()
+
+y = np.array(y)
 # ---------------------------------------------------------------------------- #
 # Plot results
 # ---------------------------------------------------------------------------- #
+plt.figure()
+plt.subplot(1,2,1)
+crossSection = CMT.getCrossSection(modeList,xRange,yRange)
+plt.imshow(np.real(crossSection),cmap='Greys',extent = (xmin,xmax,ymin,ymax))
+plt.title('Cross Section')
+plt.xlabel('X (microns)')
+plt.ylabel('Y (microns)')
+
+plt.subplot(1,2,2)
+topView =  CMT.getTopView(modeList,xRange,zRange)
+plt.imshow(np.real(topView),cmap='Greys',extent = (xmin,xmax,zmin,zmax))
+plt.title('Top View')
+plt.xlabel('X (microns)')
+plt.ylabel('Z (microns)')
+
+plt.tight_layout()
+plt.savefig('straight_straight_geo.png')
+
+plt.figure()
+plt.subplot(2,1,1)
+plt.plot(L,coupler1_power,linewidth=2,color='blue',label='Analytic')
+plt.plot(z,np.abs(y[:,0]) ** 2,'--',color='red',linewidth=2,label='CMT')
+plt.title('Waveguide 1')
+plt.xlabel('Z position (microns)')
+plt.ylabel('Relative Power')
+plt.legend()
+plt.grid(True)
+
+
+plt.subplot(2,1,2)
+plt.plot(L,coupler2_power,linewidth=2,color='blue',label='Analytic')
+plt.plot(z,np.abs(y[:,1]) ** 2,'--',color='red',linewidth=2,label='CMT')
+plt.title('Waveguide 2')
+plt.xlabel('Z position (microns)')
+plt.ylabel('Relative Power')
+plt.legend()
+plt.grid(True)
+
+plt.tight_layout()
+plt.savefig('straight_straight_results.png')
+plt.show()

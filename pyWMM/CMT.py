@@ -17,13 +17,11 @@ from scipy import linalg
 
    Output:
 '''
-def CMTsetup(modeList,xmin,xmax,ymin,ymax):
+def CMTsetup(modeList,xmin,xmax,ymin,ymax,z=0):
     n = len(modeList)
 
     S = np.zeros((n,n),dtype=np.complex128)
     C = np.zeros((n,n),dtype=np.complex128)
-
-    ez = np.array([0, 0, 1])
 
     # TODO: Validate input
 
@@ -33,7 +31,7 @@ def CMTsetup(modeList,xmin,xmax,ymin,ymax):
     def eps_full(x,y):
         eps_bank = (np.zeros((n,x.size,y.size),dtype=np.complex128))
         for listIter in range(n):
-            eps_bank[listIter,:,:] = modeList[listIter].Eps(x,y)
+            eps_bank[listIter,:,:] = modeList[listIter].Eps(x,y,z)
         return np.max(eps_bank,axis=0)
 
     # Iterate through modes
@@ -44,10 +42,10 @@ def CMTsetup(modeList,xmin,xmax,ymin,ymax):
             m = modeList[rowIter]
             k = modeList[colIter]
             integrand = lambda y,x: (\
-            m.Ex(x,y) * k.Hy(x,y).conj() - \
-            m.Ey(x,y) * k.Hx(x,y).conj() + \
-            k.Ex(x,y).conj() * m.Hy(x,y) - \
-            k.Ey(x,y).conj() * m.Hx(x,y)) \
+            m.Ex(x,y,z) * k.Hy(x,y,z).conj() - \
+            m.Ey(x,y,z) * k.Hx(x,y,z).conj() + \
+            k.Ex(x,y,z).conj() * m.Hy(x,y,z) - \
+            k.Ey(x,y,z).conj() * m.Hx(x,y,z)) \
             / np.sqrt(m.total_power*k.total_power)
 
             intresult = wmm.complex_quadrature(integrand, xmin, xmax, ymin, ymax)
@@ -62,22 +60,30 @@ def CMTsetup(modeList,xmin,xmax,ymin,ymax):
                 k = modeList[colIter]
                 integrand = lambda y,x: \
                 -1j * 2 * np.pi * omega * wmm.EPS0 / np.sqrt(m.total_power*k.total_power) *\
-                (eps_full(x,y) - k.Eps(x,y)) * \
-                (m.Ex(x,y) * k.Ex(x,y).conj() + \
-                 m.Ey(x,y) * k.Ey(x,y).conj() + \
-                 m.Ez(x,y) * k.Ez(x,y).conj())
+                (eps_full(x,y) - k.Eps(x,y,z)) * \
+                (m.Ex(x,y,z) * k.Ex(x,y,z).conj() + \
+                 m.Ey(x,y,z) * k.Ey(x,y,z).conj() + \
+                 m.Ez(x,y,z) * k.Ez(x,y,z).conj())
 
                 intresult = wmm.complex_quadrature(integrand, xmin, xmax, ymin, ymax)
                 C[rowIter,colIter] = intresult
                 #C[rowIter,colIter] = integrate.dblquad(integrand,xmin,xmax,lambda x: ymin, lambda x: ymax)
-    print('======')
-    print(-1j * 2 * np.pi * omega * wmm.EPS0 / np.sqrt(m.total_power*k.total_power))
-    print(S)
-    print(C)
     result = np.matmul(linalg.pinv(S), C)
-    print(result)
     return result
 
+def getCrossSection(modeList,x,y,z=0):
+    n = len(modeList)
+    eps_bank = (np.zeros((n,x.size,y.size),dtype=np.complex128))
+    for listIter in range(n):
+        eps_bank[listIter,:,:] = modeList[listIter].Eps(x,y,z)
+    return np.max(eps_bank,axis=0).T
+
+def getTopView(modeList,x,z,y=0):
+    n = len(modeList)
+    eps_bank = (np.zeros((n,x.size,z.size),dtype=np.complex128))
+    for listIter in range(n):
+        eps_bank[listIter,:,:] = modeList[listIter].Eps(x,y,z)
+    return np.max(eps_bank,axis=0).T
 
 def makeSupermode(mode1, mode2, x, y):
     #X, Y  = np.meshgrid(x,y)

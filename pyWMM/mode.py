@@ -16,6 +16,7 @@ from pyWMM import WMM as wmm
 import numpy as np
 from scipy import interpolate
 from scipy import integrate
+from matplotlib import pyplot as plt
 
 # ---------------------------------------------------------------------------- #
 #
@@ -33,8 +34,20 @@ class Mode:
                  pol = None, wavelength = None, neff = None
                  ):
 
-        x = x - center[0]
-        y = y - center[1]
+        #Initialize all the other variables
+        self.omega = omega
+        self.pol  = None
+        self.sym  = None
+        self.beta = None
+        self.k0   = None
+        self.neff = None
+        self.radius = radius
+
+        # Set waveguide's center
+        self.xCenter = center[0]
+        self.yCenter = center[1]
+        self.zCenter = center[2]
+
         # Ensure the correct coordinate system
         if (Ex is None and Er is None and Ez is None and Ephi is None) or (Hx is None and Hr is None and Hz is None and Hphi is None) or (x is None and r is None):
             raise ValueError('Missing either an x component or r component in fields!')
@@ -53,41 +66,47 @@ class Mode:
         if self.coordinates == wmm.CARTESIAN:
             self.Eps_r          = interpolate.RectBivariateSpline(x, y, np.real(Eps))
             self.Eps_i          = interpolate.RectBivariateSpline(x, y, np.imag(Eps))
-            self.Eps = lambda x,y: self.Eps_r(x,y,grid=True) + 1j*self.Eps_i(x,y,grid=True)
 
             self.Ex_r           = interpolate.RectBivariateSpline(x, y, np.real(Ex))
             self.Ex_i           = interpolate.RectBivariateSpline(x, y, np.imag(Ex))
-            self.Ex = lambda x,y: self.Ex_r(x,y,grid=True) + 1j*self.Ex_i(x,y,grid=True)
 
             self.Ey_r           = interpolate.RectBivariateSpline(x, y, np.real(Ey))
             self.Ey_i           = interpolate.RectBivariateSpline(x, y, np.imag(Ey))
-            self.Ey = lambda x,y: self.Ey_r(x,y,grid=True) + 1j*self.Ey_i(x,y,grid=True)
 
             self.Ez_r           = interpolate.RectBivariateSpline(x, y, np.real(Ez))
             self.Ez_i           = interpolate.RectBivariateSpline(x, y, np.imag(Ez))
-            self.Ez = lambda x,y: self.Ez_r(x,y,grid=True) + 1j*self.Ez_i(x,y,grid=True)
 
             self.Hx_r           = interpolate.RectBivariateSpline(x, y, np.real(Hx))
             self.Hx_i           = interpolate.RectBivariateSpline(x, y, np.imag(Hx))
-            self.Hx = lambda x,y: self.Hx_r(x,y,grid=True) + 1j*self.Hx_i(x,y,grid=True)
 
             self.Hy_r           = interpolate.RectBivariateSpline(x, y, np.real(Hy))
             self.Hy_i           = interpolate.RectBivariateSpline(x, y, np.imag(Hy))
-            self.Hy = lambda x,y: self.Hy_r(x,y,grid=True) + 1j*self.Hy_i(x,y,grid=True)
 
             self.Hz_r           = interpolate.RectBivariateSpline(x, y, np.real(Hz))
             self.Hz_i           = interpolate.RectBivariateSpline(x, y, np.imag(Hz))
-            self.Hz = lambda x,y: self.Hz_r(x,y,grid=True) + 1j*self.Hz_i(x,y,grid=True)
 
             self.x            = x
         elif self.coordinates == wmm.CYLINDRICAL:
-            self.Eps          = interpolate.RectBivariateSpline(r, y, Eps)
-            self.Er           = interpolate.RectBivariateSpline(r, y, Er)
-            self.Ey           = interpolate.RectBivariateSpline(r, y, Ey)
-            self.Ephi         = interpolate.RectBivariateSpline(r, y, Ephi)
-            self.Hr           = interpolate.RectBivariateSpline(r, y, Hr)
-            self.Hy           = interpolate.RectBivariateSpline(r, y, Hy)
-            self.Hphi         = interpolate.RectBivariateSpline(r, y, Hphi)
+            self.Eps_r          = interpolate.RectBivariateSpline(r, y, np.real(Eps))
+            self.Eps_i          = interpolate.RectBivariateSpline(r, y, np.imag(Eps))
+
+            self.Er_r           = interpolate.RectBivariateSpline(r, y, np.real(Er))
+            self.Er_i           = interpolate.RectBivariateSpline(r, y, np.imag(Er))
+
+            self.Ey_r           = interpolate.RectBivariateSpline(r, y, np.real(Ey))
+            self.Ey_i           = interpolate.RectBivariateSpline(r, y, np.imag(Ey))
+
+            self.Ephi_r         = interpolate.RectBivariateSpline(r, y, np.real(Ephi))
+            self.Ephi_i         = interpolate.RectBivariateSpline(r, y, np.imag(Ephi))
+
+            self.Hr_r           = interpolate.RectBivariateSpline(r, y, np.real(Hr))
+            self.Hr_i           = interpolate.RectBivariateSpline(r, y, np.imag(Hr))
+
+            self.Hy_r           = interpolate.RectBivariateSpline(r, y, np.real(Hy))
+            self.Hy_i           = interpolate.RectBivariateSpline(r, y, np.imag(Hy))
+
+            self.Hphi_r         = interpolate.RectBivariateSpline(r, y, np.real(Hphi))
+            self.Hphi_i         = interpolate.RectBivariateSpline(r, y, np.imag(Hphi))
             self.r            = r
         else:
             raise ValueError('Invalid coordinate system defined!')
@@ -102,22 +121,133 @@ class Mode:
 
         # Get the normalizing factor
         self.nrm    = 1
-        self.ampfac = np.sqrt(self.nrm)/np.sqrt(self.total_power)
+        #self.ampfac = np.sqrt(self.nrm)/np.sqrt(self.total_power)
         #self.ampfac = 1
-        #Initialize all the other variables
-        self.omega = omega
-        self.pol  = None
-        self.sym  = None
-        self.beta = None
-        self.k0   = None
-        self.neff = None
-        self.center = center
 
-	# field values at point (x, y)
-	# 	Fcomp: E, H, Eps
-    # returns a #D vector
+    def Eps(self,x,y,z=0,grid=True,centering=True):
+        if centering:
+            x = x-self.xCenter
+            y = y-self.yCenter
+            z = z-self.zCenter
+        if self.coordinates == wmm.CARTESIAN:
+            if z is np.ndarray:
+                return np.squeeze(np.tile(self.Eps_r(x,y,grid=grid) + 1j*self.Eps_i(x,y,grid=grid),(1,z.size)))
+            else:
+                return self.Eps_r(x,y,grid=grid) + 1j*self.Eps_i(x,y,grid=grid)
+        elif self.coordinates == wmm.CYLINDRICAL:
+            X,Y,Z = np.meshgrid(x,y,z,sparse=True, indexing='ij')
+            R = np.sqrt(X ** 2 + Z ** 2) - self.radius
+            temp = np.squeeze(self.Eps_r(R,Y,grid=False) + 1j*self.Eps_i(R,Y,grid=False))
+            return temp
+
+    def Ex(self,x,y,z=0,grid=True,centering=True):
+        if centering:
+            x = x-self.xCenter
+            y = y-self.yCenter
+            z = z-self.zCenter
+        if self.coordinates == wmm.CARTESIAN:
+            if z is np.ndarray:
+                return np.squeeze(np.tile(self.Ex_r(x,y,grid=grid) + 1j*self.Ex_i(x,y,grid=grid),(1,z.size)))
+            else:
+                return self.Ex_r(x,y,grid=grid) + 1j*self.Ex_i(x,y,grid=grid)
+        elif self.coordinates == wmm.CYLINDRICAL:
+            X,Y,Z = np.meshgrid(x,y,z,sparse=True, indexing='ij')
+            R = np.sqrt(X ** 2 + Z ** 2) - self.radius
+            temp = np.squeeze(\
+            X/(R + self.radius) * (self.Er_r(R,Y,grid=False) + self.Er_i(R,Y,grid=False)) + \
+            Z/(R + self.radius) * (self.Ephi_r(R,Y,grid=False) + self.Ephi_i(R,Y,grid=False)))
+            return temp
+
+    def Ey(self,x,y,z=0,grid=True,centering=True):
+        if centering:
+            x = x-self.xCenter
+            y = y-self.yCenter
+            z = z-self.zCenter
+        if self.coordinates == wmm.CARTESIAN:
+            if z is np.ndarray:
+                return np.squeeze(np.tile(self.Ey_r(x,y,grid=grid) + 1j*self.Ey_i(x,y,grid=grid),(1,z.size)))
+            else:
+                return self.Ey_r(x,y,grid=grid) + 1j*self.Ey_i(x,y,grid=grid)
+        elif self.coordinates == wmm.CYLINDRICAL:
+            X,Y,Z = np.meshgrid(x,y,z,sparse=True, indexing='ij')
+            R = np.sqrt(X ** 2 + Z ** 2) - self.radius
+            temp = np.squeeze(self.Ey_r(R,Y,grid=False) + 1j*self.Ey_i(R,Y,grid=False))
+            return temp
+
+    def Ez(self,x,y,z=0,grid=True,centering=True):
+        if centering:
+            x = x-self.xCenter
+            y = y-self.yCenter
+            z = z-self.zCenter
+        if self.coordinates == wmm.CARTESIAN:
+            if z is np.ndarray:
+                return np.squeeze(np.tile(self.Ez_r(x,y,grid=grid) + 1j*self.Ez_i(x,y,grid=grid),(1,z.size)))
+            else:
+                return self.Ez_r(x,y,grid=grid) + 1j*self.Ez_i(x,y,grid=grid)
+        elif self.coordinates == wmm.CYLINDRICAL:
+            #Ez = Hrow * cos(phi) - Hphi * sin(phi)
+            X,Y,Z = np.meshgrid(x,y,z,sparse=True, indexing='ij')
+            R = np.sqrt(X ** 2 + Z ** 2) - self.radius
+            temp = np.squeeze(\
+            Z/(R + self.radius) * (self.Er_r(R,Y,grid=False) + self.Er_i(R,Y,grid=False)) - \
+            X/(R + self.radius) * (self.Ephi_r(R,Y,grid=False) + self.Ephi_i(R,Y,grid=False)))
+            return temp
+
+    def Hx(self,x,y,z=0,grid=True,centering=True):
+        if centering:
+            x = x-self.xCenter
+            y = y-self.yCenter
+            z = z-self.zCenter
+        if self.coordinates == wmm.CARTESIAN:
+            if z is np.ndarray:
+                return np.squeeze(np.tile(self.Hx_r(x,y,grid=grid) + 1j*self.Hx_i(x,y,grid=grid),(1,z.size)))
+            else:
+                return self.Hx_r(x,y,grid=grid) + 1j*self.Hx_i(x,y,grid=grid)
+        elif self.coordinates == wmm.CYLINDRICAL:
+            X,Y,Z = np.meshgrid(x,y,z,sparse=True, indexing='ij')
+            R = np.sqrt(X ** 2 + Z ** 2) - self.radius
+            temp = np.squeeze(\
+            X/(R + self.radius) * (self.Hr_r(R,Y,grid=False) + self.Hr_i(R,Y,grid=False)) + \
+            Z/(R + self.radius) * (self.Hphi_r(R,Y,grid=False) + self.Hphi_i(R,Y,grid=False)))
+            return temp
+
+    def Hy(self,x,y,z=0,grid=True,centering=True):
+        if centering:
+            x = x-self.xCenter
+            y = y-self.yCenter
+            z = z-self.zCenter
+        if self.coordinates == wmm.CARTESIAN:
+            if z is np.ndarray:
+                return np.squeeze(np.tile(self.Hy_r(x,y,grid=grid) + 1j*self.Hy_i(x,y,grid=grid),(1,z.size)))
+            else:
+                return self.Hy_r(x,y,grid=grid) + 1j*self.Hy_i(x,y,grid=grid)
+        elif self.coordinates == wmm.CYLINDRICAL:
+            X,Y,Z = np.meshgrid(x,y,z,sparse=True, indexing='ij')
+            R = np.sqrt(X ** 2 + Z ** 2) - self.radius
+            temp = np.squeeze(self.Hy_r(R,Y,grid=False) + 1j*self.Hy_i(R,Y,grid=False))
+            return temp
+
+    def Hz(self,x,y,z=0,grid=True,centering=True):
+        if centering:
+            x = x-self.xCenter
+            y = y-self.yCenter
+            z = z-self.zCenter
+        if self.coordinates == wmm.CARTESIAN:
+            if z is np.ndarray:
+                return np.squeeze(np.tile(self.Hz_r(x,y,grid=grid) + 1j*self.Hz_i(x,y,grid=grid),(1,z.size)))
+            else:
+                return self.Hz_r(x,y,grid=grid) + 1j*self.Hz_i(x,y,grid=grid)
+        elif self.coordinates == wmm.CYLINDRICAL:
+            #Ez = Hrow * cos(phi) - Hphi * sin(phi)
+            X,Y,Z = np.meshgrid(x,y,z,sparse=True, indexing='ij')
+            R = np.sqrt(X ** 2 + Z ** 2) - self.radius
+            temp = np.squeeze(\
+            Z/(R + self.radius) * (self.Hr_r(R,Y,grid=False) + self.Hr_i(R,Y,grid=False)) - \
+            X/(R + self.radius) * (self.Hphi_r(R,Y,grid=False) + self.Hphi_i(R,Y,grid=False)))
+            return temp
+
+
     def get_field(self, fComp, x, y, z):
-
         #Extract center
         centerX = self.center[0]
         centerY = self.center[1]
@@ -169,7 +299,7 @@ class Mode:
             f = lambda y, x: self.Ey(x,y) * self.Hx(x,y).conj()
             xmin = self.x[0]; xmax = self.x[-1];
         elif self.coordinates == wmm.CYLINDRICAL:
-            f = lambda y, r: self.Ey(x,y) * self.Hr(r,y)
+            f = lambda y, r: self.Ey(r,y) * self.Hx(r,y).conj()
             xmin = self.r[0]; xmax = self.r[-1];
         else:
             raise ValueError('Invalid coordinate system defined!')
@@ -185,9 +315,9 @@ class Mode:
     def calc_TM_power(self):
         if self.coordinates == wmm.CARTESIAN:
             f = lambda y, x: self.Ex(x,y) * self.Hy(x,y).conj()
-            xmin = np.min(self.x); xmax = np.min(self.x[-1]);
+            xmin = self.x[0]; xmax = self.x[-1];
         elif self.coordinates == wmm.CYLINDRICAL:
-            f = lambda y, r: self.Ex(x,y) * self.Hy(r,y)
+            f = lambda y, r: self.Ex(r,y) * self.Hy(r,y).conj()
             xmin = self.r[0]; xmax = self.r[-1];
         else:
             raise ValueError('Invalid coordinate system defined!')
