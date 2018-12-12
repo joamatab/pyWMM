@@ -60,12 +60,13 @@ wgRight = mode.Mode(Eps = Eps, kVec = kVec, center=centerRight, omega = omega,
 nRange  = 1e3
 modeList = [wgLeft,wgRight]
 zmin = 0; zmax = 4*radius;
-xmin = -4; xmax = 4;
-ymin = -5;  ymax = 5;
+xmin = -6; xmax = 1;
+ymin = -1;  ymax = 1;
 xRange = np.linspace(xmin,xmax,nRange)
 yRange = np.linspace(ymin,ymax,nRange)
 zRange = np.linspace(zmin,zmax,nRange)
 
+'''
 A0 = np.squeeze(np.array([1,0]))
 
 func = lambda zFunc,A: CMT.CMTsetup(modeList,xmin,xmax,ymin,ymax,zFunc).dot(A)
@@ -86,21 +87,63 @@ y = np.array(y)
 
 plt.figure()
 plt.plot(z,y)
+'''
 
 plt.figure()
-plt.subplot(1,2,1)
+plt.subplot(1,3,1)
+topView =  CMT.getTopView(modeList,xRange,zRange)
+topView_ex =  CMT.getTopView_Ex(modeList,xRange,zRange)
+plt.imshow(np.real(topView),cmap='Greys',extent = (xmin,xmax,zmin,zmax),origin='lower')
+plt.imshow(np.abs(topView_ex),alpha=0.5,extent = (xmin,xmax,zmin,zmax),origin='lower')
+plt.title('Top View')
+plt.xlabel('X (microns)')
+plt.ylabel('Z (microns)')
+plt.title('Ex')
+'''
 crossSection = CMT.getCrossSection(modeList,xRange,yRange,z=2*radius)
 plt.imshow(np.real(crossSection),cmap='Greys',extent = (xmin,xmax,ymin,ymax),origin='lower')
 plt.title('Cross Section')
 plt.xlabel('X (microns)')
 plt.ylabel('Y (microns)')
+'''
 
-plt.subplot(1,2,2)
+plt.subplot(1,3,2)
 topView =  CMT.getTopView(modeList,xRange,zRange)
+topView_ey =  CMT.getTopView_Ey(modeList,xRange,zRange)
 plt.imshow(np.real(topView),cmap='Greys',extent = (xmin,xmax,zmin,zmax),origin='lower')
+plt.imshow(np.real(topView_ey),alpha=0.5,extent = (xmin,xmax,zmin,zmax),origin='lower')
 plt.title('Top View')
 plt.xlabel('X (microns)')
 plt.ylabel('Z (microns)')
+plt.title('Ey')
+
+plt.subplot(1,3,3)
+topView =  CMT.getTopView(modeList,xRange,zRange)
+topView_ez =  CMT.getTopView_Ez(modeList,xRange,zRange)
+plt.imshow(np.real(topView),cmap='Greys',extent = (xmin,xmax,zmin,zmax),origin='lower')
+plt.imshow(np.real(topView_ez),alpha=0.5,extent = (xmin,xmax,zmin,zmax),origin='lower')
+plt.title('Top View')
+plt.xlabel('X (microns)')
+plt.ylabel('Z (microns)')
+plt.title('Ez')
+
+
+plt.tight_layout()
+plt.savefig('threeD_view.png')
+plt.show()
+quit()
+
+zSweep = [radius, 1.25*radius,1.5*radius,2*radius, 2.5*radius, 2.75 *radius, 3*radius]
+plt.figure()
+for k in range(len(zSweep)):
+    plt.subplot(len(zSweep),2,2*k+1)
+    Ex = CMT.getCrossSection_Ex(modeList,xRange,yRange,zSweep[k])
+    plt.imshow(np.real(Ex),extent = (xmin,xmax,ymin,ymax),origin='lower')
+
+    plt.subplot(len(zSweep),2,2*k+2)
+    Ey = CMT.getCrossSection_Ey(modeList,xRange,yRange,zSweep[k])
+    plt.imshow(np.real(Ey),extent = (xmin,xmax,ymin,ymax),origin='lower')
+
 
 plt.tight_layout()
 plt.show()

@@ -154,8 +154,8 @@ class Mode:
             X,Y,Z = np.meshgrid(x,y,z,sparse=True, indexing='ij')
             R = np.sqrt(X ** 2 + Z ** 2) - self.radius
             temp = np.squeeze(\
-            X/(R + self.radius) * (self.Er_r(R,Y,grid=False) + self.Er_i(R,Y,grid=False)) + \
-            Z/(R + self.radius) * (self.Ephi_r(R,Y,grid=False) + self.Ephi_i(R,Y,grid=False)))
+            np.abs(X/(R + self.radius)) * (self.Er_r(R,Y,grid=False) + self.Er_i(R,Y,grid=False)) + \
+            np.abs(Z/(R + self.radius)) * (self.Ephi_r(R,Y,grid=False) + self.Ephi_i(R,Y,grid=False)))
             return temp
 
     def Ey(self,x,y,z=0,grid=True,centering=True):
@@ -189,8 +189,8 @@ class Mode:
             X,Y,Z = np.meshgrid(x,y,z,sparse=True, indexing='ij')
             R = np.sqrt(X ** 2 + Z ** 2) - self.radius
             temp = np.squeeze(\
-            Z/(R + self.radius) * (self.Er_r(R,Y,grid=False) + self.Er_i(R,Y,grid=False)) - \
-            X/(R + self.radius) * (self.Ephi_r(R,Y,grid=False) + self.Ephi_i(R,Y,grid=False)))
+            np.abs(Z/(R + self.radius)) * (self.Er_r(R,Y,grid=False) + self.Er_i(R,Y,grid=False)) - \
+            np.abs(X/(R + self.radius)) * (self.Ephi_r(R,Y,grid=False) + self.Ephi_i(R,Y,grid=False)))
             return temp
 
     def Hx(self,x,y,z=0,grid=True,centering=True):
@@ -207,8 +207,8 @@ class Mode:
             X,Y,Z = np.meshgrid(x,y,z,sparse=True, indexing='ij')
             R = np.sqrt(X ** 2 + Z ** 2) - self.radius
             temp = np.squeeze(\
-            X/(R + self.radius) * (self.Hr_r(R,Y,grid=False) + self.Hr_i(R,Y,grid=False)) + \
-            Z/(R + self.radius) * (self.Hphi_r(R,Y,grid=False) + self.Hphi_i(R,Y,grid=False)))
+            np.abs(X/(R + self.radius)) * (self.Hr_r(R,Y,grid=False) + self.Hr_i(R,Y,grid=False)) + \
+            np.abs(Z/(R + self.radius)) * (self.Hphi_r(R,Y,grid=False) + self.Hphi_i(R,Y,grid=False)))
             return temp
 
     def Hy(self,x,y,z=0,grid=True,centering=True):
@@ -242,8 +242,8 @@ class Mode:
             X,Y,Z = np.meshgrid(x,y,z,sparse=True, indexing='ij')
             R = np.sqrt(X ** 2 + Z ** 2) - self.radius
             temp = np.squeeze(\
-            Z/(R + self.radius) * (self.Hr_r(R,Y,grid=False) + self.Hr_i(R,Y,grid=False)) - \
-            X/(R + self.radius) * (self.Hphi_r(R,Y,grid=False) + self.Hphi_i(R,Y,grid=False)))
+            np.abs(Z/(R + self.radius)) * (self.Hr_r(R,Y,grid=False) + self.Hr_i(R,Y,grid=False)) - \
+            np.abs(X/(R + self.radius)) * (self.Hphi_r(R,Y,grid=False) + self.Hphi_i(R,Y,grid=False)))
             return temp
 
 
@@ -299,7 +299,8 @@ class Mode:
             f = lambda y, x: self.Ey(x,y) * self.Hx(x,y).conj()
             xmin = self.x[0]; xmax = self.x[-1];
         elif self.coordinates == wmm.CYLINDRICAL:
-            f = lambda y, r: self.Ey(r,y) * self.Hx(r,y).conj()
+            f = lambda y, r: (self.Ey_r(r,y) + self.Ey_i(r,y)) *\
+                        (self.Hr_r(r,y) + self.Hr_i(r,y)).conj()
             xmin = self.r[0]; xmax = self.r[-1];
         else:
             raise ValueError('Invalid coordinate system defined!')
@@ -317,7 +318,8 @@ class Mode:
             f = lambda y, x: self.Ex(x,y) * self.Hy(x,y).conj()
             xmin = self.x[0]; xmax = self.x[-1];
         elif self.coordinates == wmm.CYLINDRICAL:
-            f = lambda y, r: self.Ex(r,y) * self.Hy(r,y).conj()
+            f = lambda y, r: (self.Er_r(r,y) + self.Er_i(r,y)) *\
+                    (self.Hy_r(r,y) + self.Hy_i(r,y)).conj()
             xmin = self.r[0]; xmax = self.r[-1];
         else:
             raise ValueError('Invalid coordinate system defined!')

@@ -78,12 +78,47 @@ def getCrossSection(modeList,x,y,z=0):
         eps_bank[listIter,:,:] = modeList[listIter].Eps(x,y,z)
     return np.max(eps_bank,axis=0).T
 
+def getCrossSection_Ex(modeList,x,y,z=0):
+    n = len(modeList)
+    ey_bank = (np.zeros((n,x.size,y.size),dtype=np.complex128))
+    for listIter in range(n):
+        ey_bank[listIter,:,:] = modeList[listIter].Ex(x,y,z)
+    return np.sum(ey_bank,axis=0).T
+
+def getCrossSection_Ey(modeList,x,y,z=0):
+    n = len(modeList)
+    ex_bank = (np.zeros((n,x.size,y.size),dtype=np.complex128))
+    for listIter in range(n):
+        ex_bank[listIter,:,:] = modeList[listIter].Ez(x,y,z)
+    return np.sum(ex_bank,axis=0).T
+
 def getTopView(modeList,x,z,y=0):
     n = len(modeList)
     eps_bank = (np.zeros((n,x.size,z.size),dtype=np.complex128))
     for listIter in range(n):
         eps_bank[listIter,:,:] = modeList[listIter].Eps(x,y,z)
     return np.max(eps_bank,axis=0).T
+
+def getTopView_Ex(modeList,x,z,y=0):
+    n = len(modeList)
+    ex_bank = (np.zeros((n,x.size,z.size),dtype=np.complex128))
+    for listIter in range(n):
+        ex_bank[listIter,:,:] = modeList[listIter].Ex(x,y,z)
+    return np.sum(ex_bank,axis=0).T
+
+def getTopView_Ey(modeList,x,z,y=0):
+    n = len(modeList)
+    ey_bank = (np.zeros((n,x.size,z.size),dtype=np.complex128))
+    for listIter in range(n):
+        ey_bank[listIter,:,:] = modeList[listIter].Ey(x,y,z)
+    return np.sum(ey_bank,axis=0).T
+
+def getTopView_Ez(modeList,x,z,y=0):
+    n = len(modeList)
+    ez_bank = (np.zeros((n,x.size,z.size),dtype=np.complex128))
+    for listIter in range(n):
+        ez_bank[listIter,:,:] = modeList[listIter].Ez(x,y,z)
+    return np.sum(ez_bank,axis=0).T
 
 def makeSupermode(mode1, mode2, x, y):
     #X, Y  = np.meshgrid(x,y)
