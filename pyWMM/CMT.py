@@ -22,6 +22,10 @@ def CMTsetup(modeList,xmin,xmax,ymin,ymax,z=0):
 
     S = np.zeros((n,n),dtype=np.complex128)
     C = np.zeros((n,n),dtype=np.complex128)
+    P = np.zeros((n,n),dtype=np.complex128)
+    Q = np.zeros((n,n),dtype=np.complex128)
+
+    mask = np.tril(np.ones((n,n)))  # upper diagonal is zeros
 
     # TODO: Validate input
 
@@ -41,16 +45,21 @@ def CMTsetup(modeList,xmin,xmax,ymin,ymax,z=0):
             # Calculate left hand side (S matrix)
             m = modeList[rowIter]
             k = modeList[colIter]
-            integrand = lambda y,x: (\
-            m.Ex(x,y,z) * k.Hy(x,y,z).conj() - \
-            m.Ey(x,y,z) * k.Hx(x,y,z).conj() + \
-            k.Ex(x,y,z).conj() * m.Hy(x,y,z) - \
-            k.Ey(x,y,z).conj() * m.Hx(x,y,z)) \
-            / np.sqrt(m.total_power*k.total_power)
 
-            intresult = wmm.complex_quadrature(integrand, xmin, xmax, ymin, ymax)
-            S[rowIter,colIter] = intresult
-            #S[rowIter,colIter] = integrate.dblquad(integrand,xmin,xmax,lambda x: ymin, lambda x: ymax)
+            if rowIter == colIter:
+                S[rowIter,colIter] = 2 * (m.total_power + k.total_power) \
+                / (np.sqrt((m.total_power*k.total_power)))
+
+            else:
+                integrand = lambda y,x: (\
+                m.Ex(x,y,z)        * k.Hy(x,y,z).conj() - \
+                m.Ey(x,y,z)        * k.Hx(x,y,z).conj() + \
+                k.Ex(x,y,z).conj() * m.Hy(x,y,z)        - \
+                k.Ey(x,y,z).conj() * m.Hx(x,y,z))         \
+
+                intresult = wmm.complex_quadrature(integrand, xmin, xmax, ymin, ymax)
+                S[rowIter,colIter] = intresult / np.sqrt(m.total_power*k.total_power)
+                #S[rowIter,colIter] = integrate.dblquad(integrand,xmin,xmax,lambda x: ymin, lambda x: ymax)
 
             # Calculate right hand side (C matrix)
             if rowIter == colIter:
@@ -59,8 +68,8 @@ def CMTsetup(modeList,xmin,xmax,ymin,ymax,z=0):
                 m = modeList[rowIter]
                 k = modeList[colIter]
                 integrand = lambda y,x: \
-                -1j * 2 * np.pi * omega * wmm.EPS0 / np.sqrt(m.total_power*k.total_power) *\
-                (eps_full(x,y) - k.Eps(x,y,z)) * \
+                -1j * omega * wmm.EPS0 / (np.sqrt(m.total_power*k.total_power)) *\
+                (eps_full(x,y) - m.Eps(x,y,z)) * \
                 (m.Ex(x,y,z) * k.Ex(x,y,z).conj() + \
                  m.Ey(x,y,z) * k.Ey(x,y,z).conj() + \
                  m.Ez(x,y,z) * k.Ez(x,y,z).conj())
@@ -68,7 +77,17 @@ def CMTsetup(modeList,xmin,xmax,ymin,ymax,z=0):
                 intresult = wmm.complex_quadrature(integrand, xmin, xmax, ymin, ymax)
                 C[rowIter,colIter] = intresult
                 #C[rowIter,colIter] = integrate.dblquad(integrand,xmin,xmax,lambda x: ymin, lambda x: ymax)
+    # Mask the P & Q matrices
+    P = P * mask
+    Q = Q * mask
+
     result = np.matmul(linalg.pinv(S), C)
+    print('=======================================')
+    print(z)
+    print(S)
+    print(C)
+    print(result)
+    print('=======================================')
     return result
 
 def getCrossSection(modeList,x,y,z=0):

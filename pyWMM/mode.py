@@ -27,18 +27,19 @@ from matplotlib import pyplot as plt
 '''
 class Mode:
 
-    def __init__(self, Eps, kVec, center, omega,
+    def __init__(self, Eps, beta, center, wavelength,
                  Ex = None, Ey = None, Ez = None, Er = None, Ephi = None,
                  Hx = None, Hy = None, Hz = None, Hr = None, Hphi = None,
                  x = None, y = None, r = None, radius = None,
-                 pol = None, wavelength = None, neff = None
+                 pol = None, neff = None
                  ):
 
         #Initialize all the other variables
-        self.omega = omega
+        self.omega = 2 * np.pi * wmm.C0 / (wavelength*1e-6)
+        self.wavelength = wavelength
+        self.beta = beta
         self.pol  = None
         self.sym  = None
-        self.beta = None
         self.k0   = None
         self.neff = None
         self.radius = radius
@@ -146,16 +147,18 @@ class Mode:
             y = y-self.yCenter
             z = z-self.zCenter
         if self.coordinates == wmm.CARTESIAN:
-            if z is np.ndarray:
-                return np.squeeze(np.tile(self.Ex_r(x,y,grid=grid) + 1j*self.Ex_i(x,y,grid=grid),(1,z.size)))
-            else:
-                return self.Ex_r(x,y,grid=grid) + 1j*self.Ex_i(x,y,grid=grid)
+            if z.size > 1:
+                z = np.reshape(z,(1,-1))
+            return (self.Ex_r(x,y,grid=grid) + 1j*self.Ex_i(x,y,grid=grid)) * \
+                np.exp(-1j*self.beta*z)
         elif self.coordinates == wmm.CYLINDRICAL:
             X,Y,Z = np.meshgrid(x,y,z,sparse=True, indexing='ij')
-            R = np.sqrt(X ** 2 + Z ** 2) - self.radius
-            temp = np.squeeze(\
-            np.abs(X/(R + self.radius)) * (self.Er_r(R,Y,grid=False) + self.Er_i(R,Y,grid=False)) + \
-            np.abs(Z/(R + self.radius)) * (self.Ephi_r(R,Y,grid=False) + self.Ephi_i(R,Y,grid=False)))
+            R     = np.sqrt(X ** 2 + Z ** 2) - self.radius
+            phi   = np.arctan2(X,Z)
+            temp  = np.squeeze(
+            (np.abs(np.sin(phi)) * (self.Er_r(R,Y,grid=False) + self.Er_i(R,Y,grid=False)) +
+             np.abs(np.cos(phi)) * (self.Ephi_r(R,Y,grid=False) + self.Ephi_i(R,Y,grid=False)) )
+            * np.exp(-1j*self.beta*self.radius*phi))
             return temp
 
     def Ey(self,x,y,z=0,grid=True,centering=True):
@@ -165,13 +168,15 @@ class Mode:
             z = z-self.zCenter
         if self.coordinates == wmm.CARTESIAN:
             if z is np.ndarray:
-                return np.squeeze(np.tile(self.Ey_r(x,y,grid=grid) + 1j*self.Ey_i(x,y,grid=grid),(1,z.size)))
-            else:
-                return self.Ey_r(x,y,grid=grid) + 1j*self.Ey_i(x,y,grid=grid)
+                z = np.reshape(z,(1,-1))
+            return (self.Ey_r(x,y,grid=grid) + 1j*self.Ey_i(x,y,grid=grid)) * \
+                np.exp(-1j*self.beta*z)
         elif self.coordinates == wmm.CYLINDRICAL:
             X,Y,Z = np.meshgrid(x,y,z,sparse=True, indexing='ij')
+            phi = np.arctan2(X,Z)
             R = np.sqrt(X ** 2 + Z ** 2) - self.radius
-            temp = np.squeeze(self.Ey_r(R,Y,grid=False) + 1j*self.Ey_i(R,Y,grid=False))
+            temp = np.squeeze((self.Ey_r(R,Y,grid=False) + 1j*self.Ey_i(R,Y,grid=False))
+                     * np.exp(-1j*self.beta*self.radius*phi))
             return temp
 
     def Ez(self,x,y,z=0,grid=True,centering=True):
@@ -181,16 +186,18 @@ class Mode:
             z = z-self.zCenter
         if self.coordinates == wmm.CARTESIAN:
             if z is np.ndarray:
-                return np.squeeze(np.tile(self.Ez_r(x,y,grid=grid) + 1j*self.Ez_i(x,y,grid=grid),(1,z.size)))
-            else:
-                return self.Ez_r(x,y,grid=grid) + 1j*self.Ez_i(x,y,grid=grid)
+                z = np.reshape(z,(1,-1))
+            return (self.Ez_r(x,y,grid=grid) + 1j*self.Ez_i(x,y,grid=grid)) * \
+                np.exp(-1j*self.beta*z)
         elif self.coordinates == wmm.CYLINDRICAL:
             #Ez = Hrow * cos(phi) - Hphi * sin(phi)
             X,Y,Z = np.meshgrid(x,y,z,sparse=True, indexing='ij')
+            phi = np.arctan2(X,Z)
             R = np.sqrt(X ** 2 + Z ** 2) - self.radius
-            temp = np.squeeze(\
-            np.abs(Z/(R + self.radius)) * (self.Er_r(R,Y,grid=False) + self.Er_i(R,Y,grid=False)) - \
-            np.abs(X/(R + self.radius)) * (self.Ephi_r(R,Y,grid=False) + self.Ephi_i(R,Y,grid=False)))
+            temp = np.squeeze(
+            (np.abs(np.cos(phi)) * (self.Er_r(R,Y,grid=False) + self.Er_i(R,Y,grid=False)) -
+             np.abs(np.sin(phi)) * (self.Ephi_r(R,Y,grid=False) + self.Ephi_i(R,Y,grid=False)) )
+            * np.exp(-1j*self.beta*self.radius*phi))
             return temp
 
     def Hx(self,x,y,z=0,grid=True,centering=True):
@@ -200,15 +207,17 @@ class Mode:
             z = z-self.zCenter
         if self.coordinates == wmm.CARTESIAN:
             if z is np.ndarray:
-                return np.squeeze(np.tile(self.Hx_r(x,y,grid=grid) + 1j*self.Hx_i(x,y,grid=grid),(1,z.size)))
-            else:
-                return self.Hx_r(x,y,grid=grid) + 1j*self.Hx_i(x,y,grid=grid)
+                z = np.reshape(z,(1,-1))
+            return (self.Hx_r(x,y,grid=grid) + 1j*self.Hx_i(x,y,grid=grid)) * \
+                np.exp(-1j*self.beta*z)
         elif self.coordinates == wmm.CYLINDRICAL:
             X,Y,Z = np.meshgrid(x,y,z,sparse=True, indexing='ij')
             R = np.sqrt(X ** 2 + Z ** 2) - self.radius
-            temp = np.squeeze(\
-            np.abs(X/(R + self.radius)) * (self.Hr_r(R,Y,grid=False) + self.Hr_i(R,Y,grid=False)) + \
-            np.abs(Z/(R + self.radius)) * (self.Hphi_r(R,Y,grid=False) + self.Hphi_i(R,Y,grid=False)))
+            phi = np.arctan2(X,Z)
+            temp = np.squeeze(
+            (np.abs(np.sin(phi)) * (self.Hr_r(R,Y,grid=False) + self.Hr_i(R,Y,grid=False)) +
+             np.abs(np.cos(phi)) * (self.Hphi_r(R,Y,grid=False) + self.Hphi_i(R,Y,grid=False)) )
+            * np.exp(-1j*self.beta*self.radius*phi))
             return temp
 
     def Hy(self,x,y,z=0,grid=True,centering=True):
@@ -218,13 +227,15 @@ class Mode:
             z = z-self.zCenter
         if self.coordinates == wmm.CARTESIAN:
             if z is np.ndarray:
-                return np.squeeze(np.tile(self.Hy_r(x,y,grid=grid) + 1j*self.Hy_i(x,y,grid=grid),(1,z.size)))
-            else:
-                return self.Hy_r(x,y,grid=grid) + 1j*self.Hy_i(x,y,grid=grid)
+                z = np.reshape(z,(1,-1))
+            return (self.Hy_r(x,y,grid=grid) + 1j*self.Hy_i(x,y,grid=grid)) * \
+                np.exp(-1j*self.beta*z)
         elif self.coordinates == wmm.CYLINDRICAL:
             X,Y,Z = np.meshgrid(x,y,z,sparse=True, indexing='ij')
             R = np.sqrt(X ** 2 + Z ** 2) - self.radius
-            temp = np.squeeze(self.Hy_r(R,Y,grid=False) + 1j*self.Hy_i(R,Y,grid=False))
+            phi = np.arctan2(X,Z)
+            temp = np.squeeze((self.Hy_r(R,Y,grid=False) + 1j*self.Hy_i(R,Y,grid=False))
+                              * np.exp(-1j*self.beta*self.radius*phi))
             return temp
 
     def Hz(self,x,y,z=0,grid=True,centering=True):
@@ -234,16 +245,18 @@ class Mode:
             z = z-self.zCenter
         if self.coordinates == wmm.CARTESIAN:
             if z is np.ndarray:
-                return np.squeeze(np.tile(self.Hz_r(x,y,grid=grid) + 1j*self.Hz_i(x,y,grid=grid),(1,z.size)))
-            else:
-                return self.Hz_r(x,y,grid=grid) + 1j*self.Hz_i(x,y,grid=grid)
+                z = np.reshape(z,(1,-1))
+            return (self.Hz_r(x,y,grid=grid) + 1j*self.Hz_i(x,y,grid=grid)) * \
+                np.exp(-1j*self.beta*z)
         elif self.coordinates == wmm.CYLINDRICAL:
             #Ez = Hrow * cos(phi) - Hphi * sin(phi)
             X,Y,Z = np.meshgrid(x,y,z,sparse=True, indexing='ij')
             R = np.sqrt(X ** 2 + Z ** 2) - self.radius
-            temp = np.squeeze(\
-            np.abs(Z/(R + self.radius)) * (self.Hr_r(R,Y,grid=False) + self.Hr_i(R,Y,grid=False)) - \
-            np.abs(X/(R + self.radius)) * (self.Hphi_r(R,Y,grid=False) + self.Hphi_i(R,Y,grid=False)))
+            phi = np.arctan2(X,Z)
+            temp = np.squeeze(
+            (np.abs(np.cos(phi)) * (self.Hr_r(R,Y,grid=False) + self.Hr_i(R,Y,grid=False)) -
+             np.abs(np.sin(phi)) * (self.Hphi_r(R,Y,grid=False) + self.Hphi_i(R,Y,grid=False)) )
+            * np.exp(-1j*self.beta*self.radius*phi))
             return temp
 
 

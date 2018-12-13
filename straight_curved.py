@@ -23,8 +23,9 @@ lambdaSweep = npzfile['lambdaSweep']
 
 modeNumber = 0
 wavelengthNumber = 0
+wavelength = lambdaSweep[wavelengthNumber]
 omega = wmm.C0 / (lambdaSweep[wavelengthNumber] * 1e-6)
-kVec = waveNumbers[wavelengthNumber]
+beta = waveNumbers[wavelengthNumber]
 
 Ex = Er[wavelengthNumber,modeNumber,:,:]
 Ey = Ez[wavelengthNumber,modeNumber,:,:]
@@ -39,8 +40,8 @@ waveguideWidths = 0.5
 radius = 5
 gap = 0.2
 waveguideWidth = 0.5
-centerLeft = np.array([-radius  - waveguideWidth - gap,0,2*radius])
-wgLeft = mode.Mode(Eps = Eps, kVec = kVec, center=centerLeft, omega = omega,
+centerLeft = np.array([-radius  - waveguideWidth - gap,0,0])
+wgLeft = mode.Mode(Eps = Eps, beta = beta, center=centerLeft, wavelength = wavelength,
                    Er = Ex,Ey = Ey,
                    Ephi = Ez,
                    Hr = Hx,Hy = Hy,
@@ -49,7 +50,7 @@ wgLeft = mode.Mode(Eps = Eps, kVec = kVec, center=centerLeft, omega = omega,
                    radius = radius
                    )
 centerRight = np.array([0,0,0])
-wgRight = mode.Mode(Eps = Eps, kVec = kVec, center=centerRight, omega = omega,
+wgRight = mode.Mode(Eps = Eps, beta = beta, center=centerRight, wavelength = wavelength,
                    Ex = Ex,Ey = Ey,
                    Ez = Ez,
                    Hx = Hx,Hy = Hy,
@@ -59,17 +60,26 @@ wgRight = mode.Mode(Eps = Eps, kVec = kVec, center=centerRight, omega = omega,
 
 nRange  = 1e3
 modeList = [wgLeft,wgRight]
-zmin = 0; zmax = 4*radius;
-xmin = -6; xmax = 1;
+zmin = -6; zmax = 6;
+xmin = -3; xmax = 1;
 ymin = -1;  ymax = 1;
+nz = 500
 xRange = np.linspace(xmin,xmax,nRange)
 yRange = np.linspace(ymin,ymax,nRange)
 zRange = np.linspace(zmin,zmax,nRange)
 
-'''
+
 A0 = np.squeeze(np.array([1,0]))
 
+M = CMT.CMTsetup(modeList,xmin,xmax,ymin,ymax)
+func = lambda zFunc: CMT.CMTsetup(modeList,xmin,xmax,ymin,ymax,zFunc)
+
+y, F_bank = wmm.TMM(func,A0,zmin,zmax,beta,nz)
+z = np.linspace(zmin,zmax,nz)
+
+'''
 func = lambda zFunc,A: CMT.CMTsetup(modeList,xmin,xmax,ymin,ymax,zFunc).dot(A)
+
 
 zVec = np.linspace(zmin,zmax,100)
 r = integrate.complex_ode(func)
@@ -82,15 +92,16 @@ while r.successful() and r.t < zmax:
     r.integrate(r.t+dt)
     z.append(r.t)
     y.append(r.y)
-
+'''
 y = np.array(y)
 
 plt.figure()
-plt.plot(z,y)
-'''
+plt.plot(z,np.abs(y) ** 2)
+#plt.show()
+
 
 plt.figure()
-plt.subplot(1,3,1)
+plt.subplot(1,4,1)
 topView =  CMT.getTopView(modeList,xRange,zRange)
 topView_ex =  CMT.getTopView_Ex(modeList,xRange,zRange)
 plt.imshow(np.real(topView),cmap='Greys',extent = (xmin,xmax,zmin,zmax),origin='lower')
@@ -107,7 +118,7 @@ plt.xlabel('X (microns)')
 plt.ylabel('Y (microns)')
 '''
 
-plt.subplot(1,3,2)
+plt.subplot(1,4,2)
 topView =  CMT.getTopView(modeList,xRange,zRange)
 topView_ey =  CMT.getTopView_Ey(modeList,xRange,zRange)
 plt.imshow(np.real(topView),cmap='Greys',extent = (xmin,xmax,zmin,zmax),origin='lower')
@@ -117,11 +128,21 @@ plt.xlabel('X (microns)')
 plt.ylabel('Z (microns)')
 plt.title('Ey')
 
-plt.subplot(1,3,3)
+plt.subplot(1,4,3)
 topView =  CMT.getTopView(modeList,xRange,zRange)
 topView_ez =  CMT.getTopView_Ez(modeList,xRange,zRange)
 plt.imshow(np.real(topView),cmap='Greys',extent = (xmin,xmax,zmin,zmax),origin='lower')
 plt.imshow(np.real(topView_ez),alpha=0.5,extent = (xmin,xmax,zmin,zmax),origin='lower')
+plt.title('Top View')
+plt.xlabel('X (microns)')
+plt.ylabel('Z (microns)')
+plt.title('Ez')
+
+plt.subplot(1,4,4)
+topView =  CMT.getTopView(modeList,xRange,zRange)
+topView_tot =  np.sqrt(np.abs(topView_ex) ** 2 + np.abs(topView_ey) ** 2 + np.abs(topView_ez) ** 2)
+plt.imshow(np.real(topView),cmap='Greys',extent = (xmin,xmax,zmin,zmax),origin='lower')
+plt.imshow(np.real(topView_tot),alpha=0.5,extent = (xmin,xmax,zmin,zmax),origin='lower')
 plt.title('Top View')
 plt.xlabel('X (microns)')
 plt.ylabel('Z (microns)')

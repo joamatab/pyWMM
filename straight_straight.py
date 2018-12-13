@@ -49,7 +49,7 @@ if format == 'matlab':
     Hx = matfile['mode1_Hx']
     Hy = matfile['mode1_Hy']
     Hz = matfile['mode1_Hz']
-    effective_index = matfile['effective_index']
+    effective_index = np.squeeze(matfile['effective_index'])
 
     Eps = matfile['index_x'] ** 2
     wavelength = 1.55
@@ -73,8 +73,9 @@ else:
 
     modeNumber = 0
     wavelengthNumber = 0
+    wavelength = lambdaSweep[wavelengthNumber]
     omega = wmm.C0 / (lambdaSweep[wavelengthNumber] * 1e-6)
-    kVec = waveNumbers[wavelengthNumber]
+    kVec = np.squeeze(waveNumbers[wavelengthNumber])
 
     Ex = Er[wavelengthNumber,modeNumber,:,:]
     Ey = Ez[wavelengthNumber,modeNumber,:,:]
@@ -90,7 +91,7 @@ gap = 0.2
 waveguideWidths = 0.5
 
 centerLeft = np.array([-gap/2 - waveguideWidths/2,0,0])
-wgLeft = mode.Mode(Eps = Eps, kVec = kVec, center=centerLeft, omega = omega,
+wgLeft = mode.Mode(Eps = Eps, beta = kVec, center=centerLeft, wavelength = wavelength,
                    Ex = Ex,Ey = Ey,
                    Ez = Ez,
                    Hx = Hx,Hy = Hy,
@@ -98,7 +99,7 @@ wgLeft = mode.Mode(Eps = Eps, kVec = kVec, center=centerLeft, omega = omega,
                    x=x,y=y
                    )
 centerRight = np.array([gap/2+waveguideWidths/2,0,0])
-wgRight = mode.Mode(Eps = Eps, kVec = kVec, center=centerRight, omega = omega,
+wgRight = mode.Mode(Eps = Eps, beta = kVec, center=centerRight, wavelength = wavelength,
                    Ex = Ex,Ey = Ey,
                    Ez = Ez,
                    Hx = Hx,Hy = Hy,
@@ -114,17 +115,25 @@ modeList = [wgLeft,wgRight]
 zmin = 0; zmax = 15;
 xmin = -5; xmax = 5;
 ymin = -5;  ymax = 5;
+nz = 100
 xRange = np.linspace(xmin,xmax,nRange)
 yRange = np.linspace(ymin,ymax,nRange)
-zRange = np.linspace(zmin,zmax,nRange)
-A0 = np.squeeze(np.array([1,0]))
+zRange = np.linspace(zmin,zmax,nz)
+betaq = kVec
+A0 = np.squeeze(np.array([np.exp(-1j*betaq*(zmax-zmin)),0]))
+
 
 M = CMT.CMTsetup(modeList,xmin,xmax,ymin,ymax)
-func = lambda zFunc,A: M.dot(A)
+func = lambda zFunc: CMT.CMTsetup(modeList,xmin,xmax,ymin,ymax,zFunc)
 
+y, F_bank = wmm.TMM(func,A0,zmin,zmax,nz)
 # ---------------------------------------------------------------------------- #
 # Solve
 # ---------------------------------------------------------------------------- #
+
+'''
+M = CMT.CMTsetup(modeList,xmin,xmax,ymin,ymax)
+func = lambda zFunc,A: M.dot(A)
 zVec = np.linspace(zmin,zmax,100)
 r = integrate.complex_ode(func)
 r.set_initial_value(A0,zmin)
@@ -138,6 +147,7 @@ while r.successful() and r.t < zmax:
     y.append(r.y)
 
 y = np.array(y)
+'''
 # ---------------------------------------------------------------------------- #
 # Plot results
 # ---------------------------------------------------------------------------- #
@@ -162,17 +172,18 @@ plt.savefig('straight_straight_geo.png')
 plt.figure()
 plt.subplot(2,1,1)
 plt.plot(L,coupler1_power,linewidth=2,color='blue',label='Analytic')
-plt.plot(z,np.abs(y[:,0]) ** 2,'--',color='red',linewidth=2,label='CMT')
+plt.plot(zRange,np.abs(y[:,0]) ** 2,'--',color='red',linewidth=2,label='CMT')
 plt.title('Waveguide 1')
 plt.xlabel('Z position (microns)')
 plt.ylabel('Relative Power')
 plt.legend()
+plt.ylim(-1,2)
 plt.grid(True)
 
 
 plt.subplot(2,1,2)
 plt.plot(L,coupler2_power,linewidth=2,color='blue',label='Analytic')
-plt.plot(z,np.abs(y[:,1]) ** 2,'--',color='red',linewidth=2,label='CMT')
+plt.plot(zRange,np.abs(y[:,1]) ** 2,'--',color='red',linewidth=2,label='CMT')
 plt.title('Waveguide 2')
 plt.xlabel('Z position (microns)')
 plt.ylabel('Relative Power')
