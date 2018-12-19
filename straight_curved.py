@@ -35,13 +35,18 @@ Hx = Hr[wavelengthNumber,modeNumber,:,:]
 Hy = Hz[wavelengthNumber,modeNumber,:,:]
 Hz = Hphi[wavelengthNumber,modeNumber,:,:]
 
-gap = 0.2
-waveguideWidths = 0.5
-radius = 5
-gap = 0.2
+gap = 0.1
+radius = 10
+coreEps = 9
+claddingEps = 4
 waveguideWidth = 0.5
+waveguideThickness = 0.22
+
 centerLeft = np.array([-radius  - waveguideWidth - gap,0,0])
-wgLeft = mode.Mode(Eps = Eps, beta = beta, center=centerLeft, wavelength = wavelength,
+print(centerLeft)
+wgLeft = mode.Mode(beta = beta, center=centerLeft, wavelength = wavelength,
+                   waveguideWidth = waveguideWidth, waveguideThickness = waveguideThickness,
+                   coreEps = coreEps, claddingEps = claddingEps,
                    Er = Ex,Ey = Ey,
                    Ephi = Ez,
                    Hr = Hx,Hy = Hy,
@@ -50,73 +55,32 @@ wgLeft = mode.Mode(Eps = Eps, beta = beta, center=centerLeft, wavelength = wavel
                    radius = radius
                    )
 centerRight = np.array([0,0,0])
-wgRight = mode.Mode(Eps = Eps, beta = beta, center=centerRight, wavelength = wavelength,
-                   Ex = Ex,Ey = Ey,
-                   Ez = Ez,
-                   Hx = Hx,Hy = Hy,
-                   Hz = Hz,
-                   x=x,y=y
+wgRight = mode.Mode(beta = beta, center=centerRight, wavelength = wavelength,
+                    waveguideWidth = waveguideWidth, waveguideThickness = waveguideThickness,
+                    coreEps = coreEps, claddingEps = claddingEps,
+                    Ex = Ex,Ey = Ey,
+                    Ez = Ez,
+                    Hx = Hx,Hy = Hy,
+                    Hz = Hz,
+                    x=x,y=y
                    )
+###############
 
 nRange  = 1e3
 modeList = [wgLeft,wgRight]
-zmin = -6; zmax = 6;
-xmin = -3; xmax = 1;
+zmin = 0; zmax = 5;
+xmin = -3;  xmax = 1;
 ymin = -1;  ymax = 1;
-nz = 500
+nz = 250
 xRange = np.linspace(xmin,xmax,nRange)
 yRange = np.linspace(ymin,ymax,nRange)
 zRange = np.linspace(zmin,zmax,nRange)
 
 
-A0 = np.squeeze(np.array([1,0]))
-
-M = CMT.CMTsetup(modeList,xmin,xmax,ymin,ymax)
-func = lambda zFunc: CMT.CMTsetup(modeList,xmin,xmax,ymin,ymax,zFunc)
-
-y, F_bank = wmm.TMM(func,A0,zmin,zmax,beta,nz)
-z = np.linspace(zmin,zmax,nz)
-
-'''
-func = lambda zFunc,A: CMT.CMTsetup(modeList,xmin,xmax,ymin,ymax,zFunc).dot(A)
 
 
-zVec = np.linspace(zmin,zmax,100)
-r = integrate.complex_ode(func)
-r.set_initial_value(A0,zmin)
-r.set_integrator('vode',nsteps=500,method='bdf')
-dt = 0.1
-y = []
-z = []
-while r.successful() and r.t < zmax:
-    r.integrate(r.t+dt)
-    z.append(r.t)
-    y.append(r.y)
-'''
-y = np.array(y)
-
-plt.figure()
-plt.plot(z,np.abs(y) ** 2)
-#plt.show()
-
-
-plt.figure()
-plt.subplot(1,4,1)
-topView =  CMT.getTopView(modeList,xRange,zRange)
+###################
 topView_ex =  CMT.getTopView_Ex(modeList,xRange,zRange)
-plt.imshow(np.real(topView),cmap='Greys',extent = (xmin,xmax,zmin,zmax),origin='lower')
-plt.imshow(np.abs(topView_ex),alpha=0.5,extent = (xmin,xmax,zmin,zmax),origin='lower')
-plt.title('Top View')
-plt.xlabel('X (microns)')
-plt.ylabel('Z (microns)')
-plt.title('Ex')
-'''
-crossSection = CMT.getCrossSection(modeList,xRange,yRange,z=2*radius)
-plt.imshow(np.real(crossSection),cmap='Greys',extent = (xmin,xmax,ymin,ymax),origin='lower')
-plt.title('Cross Section')
-plt.xlabel('X (microns)')
-plt.ylabel('Y (microns)')
-'''
 
 plt.subplot(1,4,2)
 topView =  CMT.getTopView(modeList,xRange,zRange)
@@ -146,12 +110,85 @@ plt.imshow(np.real(topView_tot),alpha=0.5,extent = (xmin,xmax,zmin,zmax),origin=
 plt.title('Top View')
 plt.xlabel('X (microns)')
 plt.ylabel('Z (microns)')
-plt.title('Ez')
+plt.title('|E|$^2$')
 
 
 plt.tight_layout()
 plt.savefig('threeD_view.png')
+#plt.show()
+#quit()
+###################
+
+A0 = np.squeeze(np.array([1,0]))
+
+M = CMT.CMTsetup(modeList,xmin,xmax,ymin,ymax)
+func = lambda zFunc: CMT.CMTsetup(modeList,xmin,xmax,ymin,ymax,zFunc)
+
+y, F_bank, S = wmm.TMM(func,A0,zmin,zmax,nz)
+z = np.linspace(zmin,zmax,nz)
+
+'''
+func = lambda zFunc,A: CMT.CMTsetup(modeList,xmin,xmax,ymin,ymax,zFunc).dot(A)
+
+
+zVec = np.linspace(zmin,zmax,100)
+r = integrate.complex_ode(func)
+r.set_initial_value(A0,zmin)
+r.set_integrator('vode',nsteps=500,method='bdf')
+dt = 0.1
+y = []
+z = []
+while r.successful() and r.t < zmax:
+    r.integrate(r.t+dt)
+    z.append(r.t)
+    y.append(r.y)
+
+y = np.array(y)
+'''
+
+plt.figure()
+plt.subplot(2,1,1)
+plt.plot(z,np.abs(y[:,0]) ** 2)
+plt.plot(z,np.abs(S[:,0,0]) ** 2,'--')
+
+plt.subplot(2,1,2)
+plt.plot(z,np.abs(y[:,1]) ** 2)
+plt.plot(z,np.abs(S[:,1,0]) ** 2,'--')
+
+plt.figure()
+plt.plot(z,np.abs(F_bank[:,0,0]) ** 2,label='T00')
+plt.plot(z,np.abs(F_bank[:,1,0]) ** 2,label='T10')
+plt.plot(z,np.abs(F_bank[:,0,1]) ** 2,'--',label='T01')
+plt.plot(z,np.abs(F_bank[:,1,1]) ** 2,label='T11')
+plt.legend()
+
+plt.figure()
+plt.plot(z,np.abs(S[:,0,0]) ** 2,label='S00')
+plt.plot(z,np.abs(S[:,1,0]) ** 2,label='S10')
+plt.plot(z,np.abs(S[:,0,1]) ** 2,'--',label='S01')
+plt.plot(z,np.abs(S[:,1,1]) ** 2,label='S11')
+plt.legend()
+
+
+plt.figure()
+plt.subplot(1,4,1)
+topView =  CMT.getTopView(modeList,xRange,zRange)
+
+plt.imshow(np.real(topView),cmap='Greys',extent = (xmin,xmax,zmin,zmax),origin='lower')
+plt.imshow(np.real(topView_ex),alpha=0.5,extent = (xmin,xmax,zmin,zmax),origin='lower')
+plt.title('Top View')
+plt.xlabel('X (microns)')
+plt.ylabel('Z (microns)')
+plt.title('Ex')
+
 plt.show()
+'''
+crossSection = CMT.getCrossSection(modeList,xRange,yRange,z=2*radius)
+plt.imshow(np.real(crossSection),cmap='Greys',extent = (xmin,xmax,ymin,ymax),origin='lower')
+plt.title('Cross Section')
+plt.xlabel('X (microns)')
+plt.ylabel('Y (microns)')
+'''
 quit()
 
 zSweep = [radius, 1.25*radius,1.5*radius,2*radius, 2.5*radius, 2.75 *radius, 3*radius]

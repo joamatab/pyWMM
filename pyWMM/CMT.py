@@ -6,6 +6,7 @@ from scipy import integrate
 from pyWMM import WMM as wmm
 from pyWMM import mode
 from scipy import linalg
+from matplotlib import pyplot as plt
 
 # ---------------------------------------------------------------------------- #
 #
@@ -19,7 +20,6 @@ from scipy import linalg
 '''
 def CMTsetup(modeList,xmin,xmax,ymin,ymax,z=0):
     n = len(modeList)
-
     S = np.zeros((n,n),dtype=np.complex128)
     C = np.zeros((n,n),dtype=np.complex128)
     P = np.zeros((n,n),dtype=np.complex128)
@@ -47,48 +47,56 @@ def CMTsetup(modeList,xmin,xmax,ymin,ymax,z=0):
             k = modeList[colIter]
 
             if rowIter == colIter:
-                S[rowIter,colIter] = 2 * (m.total_power + k.total_power) \
-                / (np.sqrt((m.total_power*k.total_power)))
+                #S[rowIter,colIter] = 0.5 * (m.total_power + k.total_power)
+            #    / (np.sqrt((m.total_power*k.total_power)))
+                Q[rowIter,colIter] = m.getPhasor(z)
+            #else:
+            integrand = lambda y,x: (\
+            m.Ex(x,y,z).conj() * k.Hy(x,y,z) - \
+            m.Ey(x,y,z).conj() * k.Hx(x,y,z) + \
+            k.Ex(x,y,z) * m.Hy(x,y,z).conj()        - \
+            k.Ey(x,y,z) * m.Hx(x,y,z)).conj()         \
 
-            else:
-                integrand = lambda y,x: (\
-                m.Ex(x,y,z)        * k.Hy(x,y,z).conj() - \
-                m.Ey(x,y,z)        * k.Hx(x,y,z).conj() + \
-                k.Ex(x,y,z).conj() * m.Hy(x,y,z)        - \
-                k.Ey(x,y,z).conj() * m.Hx(x,y,z))         \
-
-                intresult = wmm.complex_quadrature(integrand, xmin, xmax, ymin, ymax)
-                S[rowIter,colIter] = intresult / np.sqrt(m.total_power*k.total_power)
+            intresult = wmm.complex_quadrature(integrand, xmin, xmax, ymin, ymax)
+            S[rowIter,colIter] = 0.25*intresult
+            '''
+            xT = np.linspace(xmin,xmax,100)
+            yT = np.linspace(ymin,ymax,100)
+            X, Y = np.meshgrid(xT,yT,sparse=True, indexing='ij')
+            zT = np.zeros((100,100),dtype=np.complex128)
+            zT = integrand(Y,X)
+            print('********')
+            print(rowIter)
+            print(colIter)
+            plt.figure()
+            plt.imshow(np.rot90(np.real(zT)),extent = (xmin,xmax,ymin,ymax),origin='lower')
+            plt.show()
+            print('********')
+            '''
                 #S[rowIter,colIter] = integrate.dblquad(integrand,xmin,xmax,lambda x: ymin, lambda x: ymax)
 
             # Calculate right hand side (C matrix)
-            if rowIter == colIter:
-                C[rowIter,colIter] = 0.0
-            else:
-                m = modeList[rowIter]
-                k = modeList[colIter]
-                integrand = lambda y,x: \
-                -1j * omega * wmm.EPS0 / (np.sqrt(m.total_power*k.total_power)) *\
-                (eps_full(x,y) - m.Eps(x,y,z)) * \
-                (m.Ex(x,y,z) * k.Ex(x,y,z).conj() + \
-                 m.Ey(x,y,z) * k.Ey(x,y,z).conj() + \
-                 m.Ez(x,y,z) * k.Ez(x,y,z).conj())
-
-                intresult = wmm.complex_quadrature(integrand, xmin, xmax, ymin, ymax)
-                C[rowIter,colIter] = intresult
+            integrand = lambda y,x: \
+            -1j * 0.25 * omega * wmm.EPS0 *\
+            (eps_full(x,y) - k.Eps(x,y,z)) * \
+            (m.Ex(x,y,z).conj() * k.Ex(x,y,z) + \
+             m.Ey(x,y,z).conj() * k.Ey(x,y,z) + \
+             m.Ez(x,y,z).conj() * k.Ez(x,y,z))
+            intresult = wmm.complex_quadrature(integrand, xmin, xmax, ymin, ymax)
+            C[rowIter,colIter] = intresult
                 #C[rowIter,colIter] = integrate.dblquad(integrand,xmin,xmax,lambda x: ymin, lambda x: ymax)
     # Mask the P & Q matrices
-    P = P * mask
-    Q = Q * mask
-
+    Msb = S[1,0]
+    Mss = S[1,1]
+    Q[1,0] =  Msb / Mss * Q[1,1]
     result = np.matmul(linalg.pinv(S), C)
     print('=======================================')
     print(z)
-    print(S)
-    print(C)
-    print(result)
+    print(np.abs(S))
+    print(np.abs(result))
+    print(np.abs(Q))
     print('=======================================')
-    return result
+    return result, Q
 
 def getCrossSection(modeList,x,y,z=0):
     n = len(modeList)

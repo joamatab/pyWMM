@@ -27,7 +27,8 @@ from matplotlib import pyplot as plt
 '''
 class Mode:
 
-    def __init__(self, Eps, beta, center, wavelength,
+    def __init__(self, beta, center, wavelength, waveguideWidth = None, waveguideThickness = None,
+                 coreEps = None ,claddingEps = None, Eps = None,
                  Ex = None, Ey = None, Ez = None, Er = None, Ephi = None,
                  Hx = None, Hy = None, Hz = None, Hr = None, Hphi = None,
                  x = None, y = None, r = None, radius = None,
@@ -43,6 +44,10 @@ class Mode:
         self.k0   = None
         self.neff = None
         self.radius = radius
+        self.waveguideWidth = waveguideWidth
+        self.waveguideThickness = waveguideThickness
+        self.claddingEps = claddingEps
+        self.coreEps = coreEps
 
         # Set waveguide's center
         self.xCenter = center[0]
@@ -65,8 +70,8 @@ class Mode:
         # Interpolate all of the fields on the given grid
         self.y = y
         if self.coordinates == wmm.CARTESIAN:
-            self.Eps_r          = interpolate.RectBivariateSpline(x, y, np.real(Eps))
-            self.Eps_i          = interpolate.RectBivariateSpline(x, y, np.imag(Eps))
+            #self.Eps_r          = interpolate.RectBivariateSpline(x, y, np.real(Eps))
+            #self.Eps_i          = interpolate.RectBivariateSpline(x, y, np.imag(Eps))
 
             self.Ex_r           = interpolate.RectBivariateSpline(x, y, np.real(Ex))
             self.Ex_i           = interpolate.RectBivariateSpline(x, y, np.imag(Ex))
@@ -88,8 +93,8 @@ class Mode:
 
             self.x            = x
         elif self.coordinates == wmm.CYLINDRICAL:
-            self.Eps_r          = interpolate.RectBivariateSpline(r, y, np.real(Eps))
-            self.Eps_i          = interpolate.RectBivariateSpline(r, y, np.imag(Eps))
+            #self.Eps_r          = interpolate.RectBivariateSpline(r, y, np.real(Eps))
+            #self.Eps_i          = interpolate.RectBivariateSpline(r, y, np.imag(Eps))
 
             self.Er_r           = interpolate.RectBivariateSpline(r, y, np.real(Er))
             self.Er_i           = interpolate.RectBivariateSpline(r, y, np.imag(Er))
@@ -125,21 +130,32 @@ class Mode:
         #self.ampfac = np.sqrt(self.nrm)/np.sqrt(self.total_power)
         #self.ampfac = 1
 
-    def Eps(self,x,y,z=0,grid=True,centering=True):
+    def Eps(self,x=0,y=0,z=0,grid=True,centering=True):
         if centering:
             x = x-self.xCenter
             y = y-self.yCenter
             z = z-self.zCenter
         if self.coordinates == wmm.CARTESIAN:
+            X,Y,Z = np.meshgrid(x,y,z,indexing='ij')
+            epsFunc = np.ones((x.size,y.size,z.size)) * self.claddingEps
+            coreIndex = ((X >= -self.waveguideWidth/2) & (X < self.waveguideWidth/2)
+                    & (Y >= -self.waveguideThickness/2) & (Y < self.waveguideThickness/2))
+            epsFunc[coreIndex] = self.coreEps
+            return np.squeeze(epsFunc)
+            '''
             if z is np.ndarray:
                 return np.squeeze(np.tile(self.Eps_r(x,y,grid=grid) + 1j*self.Eps_i(x,y,grid=grid),(1,z.size)))
             else:
                 return self.Eps_r(x,y,grid=grid) + 1j*self.Eps_i(x,y,grid=grid)
+            '''
         elif self.coordinates == wmm.CYLINDRICAL:
-            X,Y,Z = np.meshgrid(x,y,z,sparse=True, indexing='ij')
+            X,Y,Z = np.meshgrid(x,y,z,indexing='ij')
             R = np.sqrt(X ** 2 + Z ** 2) - self.radius
-            temp = np.squeeze(self.Eps_r(R,Y,grid=False) + 1j*self.Eps_i(R,Y,grid=False))
-            return temp
+            epsFunc = np.ones((x.size,y.size,z.size)) * self.claddingEps
+            coreIndex = ((R >= -self.waveguideWidth/2) & (R < self.waveguideWidth/2)
+                    & (Y >= -self.waveguideThickness/2) & (Y < self.waveguideThickness/2))
+            epsFunc[coreIndex] = self.coreEps
+            return np.squeeze(epsFunc)
 
     def Ex(self,x,y,z=0,grid=True,centering=True):
         if centering:
@@ -154,10 +170,10 @@ class Mode:
         elif self.coordinates == wmm.CYLINDRICAL:
             X,Y,Z = np.meshgrid(x,y,z,sparse=True, indexing='ij')
             R     = np.sqrt(X ** 2 + Z ** 2) - self.radius
-            phi   = np.arctan2(X,Z)
+            phi   = np.arctan2(Z,X)
             temp  = np.squeeze(
-            (np.abs(np.sin(phi)) * (self.Er_r(R,Y,grid=False) + self.Er_i(R,Y,grid=False)) +
-             np.abs(np.cos(phi)) * (self.Ephi_r(R,Y,grid=False) + self.Ephi_i(R,Y,grid=False)) )
+            (np.cos(phi) * (self.Er_r(R,Y,grid=False) + self.Er_i(R,Y,grid=False)) -
+             np.sin(phi) * (self.Ephi_r(R,Y,grid=False) + self.Ephi_i(R,Y,grid=False)) )
             * np.exp(-1j*self.beta*self.radius*phi))
             return temp
 
@@ -173,7 +189,7 @@ class Mode:
                 np.exp(-1j*self.beta*z)
         elif self.coordinates == wmm.CYLINDRICAL:
             X,Y,Z = np.meshgrid(x,y,z,sparse=True, indexing='ij')
-            phi = np.arctan2(X,Z)
+            phi = np.arctan2(Z,X)
             R = np.sqrt(X ** 2 + Z ** 2) - self.radius
             temp = np.squeeze((self.Ey_r(R,Y,grid=False) + 1j*self.Ey_i(R,Y,grid=False))
                      * np.exp(-1j*self.beta*self.radius*phi))
@@ -192,11 +208,11 @@ class Mode:
         elif self.coordinates == wmm.CYLINDRICAL:
             #Ez = Hrow * cos(phi) - Hphi * sin(phi)
             X,Y,Z = np.meshgrid(x,y,z,sparse=True, indexing='ij')
-            phi = np.arctan2(X,Z)
+            phi = np.arctan2(Z,X)
             R = np.sqrt(X ** 2 + Z ** 2) - self.radius
             temp = np.squeeze(
-            (np.abs(np.cos(phi)) * (self.Er_r(R,Y,grid=False) + self.Er_i(R,Y,grid=False)) -
-             np.abs(np.sin(phi)) * (self.Ephi_r(R,Y,grid=False) + self.Ephi_i(R,Y,grid=False)) )
+            ((np.sin(phi)) * (self.Er_r(R,Y,grid=False) + self.Er_i(R,Y,grid=False)) +
+             (np.cos(phi)) * (self.Ephi_r(R,Y,grid=False) + self.Ephi_i(R,Y,grid=False)) )
             * np.exp(-1j*self.beta*self.radius*phi))
             return temp
 
@@ -213,10 +229,10 @@ class Mode:
         elif self.coordinates == wmm.CYLINDRICAL:
             X,Y,Z = np.meshgrid(x,y,z,sparse=True, indexing='ij')
             R = np.sqrt(X ** 2 + Z ** 2) - self.radius
-            phi = np.arctan2(X,Z)
+            phi = np.arctan2(Z,X)
             temp = np.squeeze(
-            (np.abs(np.sin(phi)) * (self.Hr_r(R,Y,grid=False) + self.Hr_i(R,Y,grid=False)) +
-             np.abs(np.cos(phi)) * (self.Hphi_r(R,Y,grid=False) + self.Hphi_i(R,Y,grid=False)) )
+            ((np.cos(phi)) * (self.Hr_r(R,Y,grid=False) + self.Hr_i(R,Y,grid=False)) -
+             (np.sin(phi)) * (self.Hphi_r(R,Y,grid=False) + self.Hphi_i(R,Y,grid=False)) )
             * np.exp(-1j*self.beta*self.radius*phi))
             return temp
 
@@ -233,7 +249,7 @@ class Mode:
         elif self.coordinates == wmm.CYLINDRICAL:
             X,Y,Z = np.meshgrid(x,y,z,sparse=True, indexing='ij')
             R = np.sqrt(X ** 2 + Z ** 2) - self.radius
-            phi = np.arctan2(X,Z)
+            phi = np.arctan2(Z,X)
             temp = np.squeeze((self.Hy_r(R,Y,grid=False) + 1j*self.Hy_i(R,Y,grid=False))
                               * np.exp(-1j*self.beta*self.radius*phi))
             return temp
@@ -252,10 +268,10 @@ class Mode:
             #Ez = Hrow * cos(phi) - Hphi * sin(phi)
             X,Y,Z = np.meshgrid(x,y,z,sparse=True, indexing='ij')
             R = np.sqrt(X ** 2 + Z ** 2) - self.radius
-            phi = np.arctan2(X,Z)
+            phi = np.arctan2(Z,X)
             temp = np.squeeze(
-            (np.abs(np.cos(phi)) * (self.Hr_r(R,Y,grid=False) + self.Hr_i(R,Y,grid=False)) -
-             np.abs(np.sin(phi)) * (self.Hphi_r(R,Y,grid=False) + self.Hphi_i(R,Y,grid=False)) )
+            ((np.sin(phi)) * (self.Hr_r(R,Y,grid=False) + self.Hr_i(R,Y,grid=False)) +
+             (np.cos(phi)) * (self.Hphi_r(R,Y,grid=False) + self.Hphi_i(R,Y,grid=False)) )
             * np.exp(-1j*self.beta*self.radius*phi))
             return temp
 
@@ -345,3 +361,19 @@ class Mode:
     def calc_total_power(self):
         self.total_power = self.TM_power + self.TE_power
         print(self.total_power)
+
+    def getPhasor(self,z):
+        z = z-self.zCenter
+        if self.coordinates == wmm.CARTESIAN:
+            return np.exp(-1j*self.beta*z)
+        elif self.coordinates == wmm.CYLINDRICAL:
+            if np.abs(z) > self.radius:
+                theta = 0
+            else:
+                theta = np.pi/2 - np.arccos(z/self.radius)
+            print('theta')
+            print(z)
+            print(theta)
+            return np.exp(-1j*self.beta*self.radius*theta)
+        else:
+            raise ValueError('Invalid coordinate system!')
