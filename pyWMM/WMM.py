@@ -81,12 +81,8 @@ def TMM(func,A0,zmin,zmax,nz):
         F   = np.matmul(mat,F)
         #F_bank[iter,:,:] = F
         F_bank[iter,:,:] = np.matmul(expm(-z[iter]*a[iter]),F)
-        print('++++++++')
-        print(F_bank[iter,:,:])
         #np.exp(-1j*beta*(z[iter]-zmin))
         A = np.squeeze(np.array([1,0]))
         f[iter,:] = F_bank[iter,:,:].dot(A)
         S_bank[iter] = np.matmul(Q_bank[iter], np.matmul(F_bank[iter],Pinv))
-        print(S_bank[iter,:,:])
-        print('++++++++')
     return f, F_bank, S_bank

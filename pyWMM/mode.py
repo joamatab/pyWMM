@@ -69,61 +69,85 @@ class Mode:
 
         # Interpolate all of the fields on the given grid
         self.y = y
+        self.total_power = 1
         if self.coordinates == wmm.CARTESIAN:
             #self.Eps_r          = interpolate.RectBivariateSpline(x, y, np.real(Eps))
             #self.Eps_i          = interpolate.RectBivariateSpline(x, y, np.imag(Eps))
 
-            self.Ex_r           = interpolate.RectBivariateSpline(x, y, np.real(Ex))
-            self.Ex_i           = interpolate.RectBivariateSpline(x, y, np.imag(Ex))
+            self.Ex_ro           = interpolate.RectBivariateSpline(x, y, np.real(Ex))
+            self.Ex_io           = interpolate.RectBivariateSpline(x, y, np.imag(Ex))
+            self.Ex_r = lambda r,y,grid=True: self.Ex_ro(r,y,grid=grid) / np.sqrt(self.total_power)
+            self.Ex_i = lambda r,y,grid=True: self.Ex_io(r,y,grid=grid) / np.sqrt(self.total_power)
 
-            self.Ey_r           = interpolate.RectBivariateSpline(x, y, np.real(Ey))
-            self.Ey_i           = interpolate.RectBivariateSpline(x, y, np.imag(Ey))
+            self.Ey_ro           = interpolate.RectBivariateSpline(x, y, np.real(Ey))
+            self.Ey_io           = interpolate.RectBivariateSpline(x, y, np.imag(Ey))
+            self.Ey_r = lambda r,y,grid=True: self.Ey_ro(r,y,grid=grid) / np.sqrt(self.total_power)
+            self.Ey_i = lambda r,y,grid=True: self.Ey_io(r,y,grid=grid) / np.sqrt(self.total_power)
 
-            self.Ez_r           = interpolate.RectBivariateSpline(x, y, np.real(Ez))
-            self.Ez_i           = interpolate.RectBivariateSpline(x, y, np.imag(Ez))
+            self.Ez_ro           = interpolate.RectBivariateSpline(x, y, np.real(Ez))
+            self.Ez_io           = interpolate.RectBivariateSpline(x, y, np.imag(Ez))
+            self.Ez_r = lambda r,y,grid=True: self.Ez_ro(r,y,grid=grid) / np.sqrt(self.total_power)
+            self.Ez_i = lambda r,y,grid=True: self.Ez_io(r,y,grid=grid) / np.sqrt(self.total_power)
 
-            self.Hx_r           = interpolate.RectBivariateSpline(x, y, np.real(Hx))
-            self.Hx_i           = interpolate.RectBivariateSpline(x, y, np.imag(Hx))
+            self.Hx_ro           = interpolate.RectBivariateSpline(x, y, np.real(Hx))
+            self.Hx_io           = interpolate.RectBivariateSpline(x, y, np.imag(Hx))
+            self.Hx_r = lambda r,y,grid=True: self.Hx_ro(r,y,grid=grid) / np.sqrt(self.total_power)
+            self.Hx_i = lambda r,y,grid=True: self.Hx_io(r,y,grid=grid) / np.sqrt(self.total_power)
 
-            self.Hy_r           = interpolate.RectBivariateSpline(x, y, np.real(Hy))
-            self.Hy_i           = interpolate.RectBivariateSpline(x, y, np.imag(Hy))
+            self.Hy_ro           = interpolate.RectBivariateSpline(x, y, np.real(Hy))
+            self.Hy_io           = interpolate.RectBivariateSpline(x, y, np.imag(Hy))
+            self.Hy_r = lambda r,y,grid=True: self.Hy_ro(r,y,grid=grid) / np.sqrt(self.total_power)
+            self.Hy_i = lambda r,y,grid=True: self.Hy_io(r,y,grid=grid) / np.sqrt(self.total_power)
 
-            self.Hz_r           = interpolate.RectBivariateSpline(x, y, np.real(Hz))
-            self.Hz_i           = interpolate.RectBivariateSpline(x, y, np.imag(Hz))
+            self.Hz_ro           = interpolate.RectBivariateSpline(x, y, np.real(Hz))
+            self.Hz_io           = interpolate.RectBivariateSpline(x, y, np.imag(Hz))
+            self.Hz_r = lambda r,y,grid=True: self.Hz_ro(r,y,grid=grid) / np.sqrt(self.total_power)
+            self.Hz_i = lambda r,y,grid=True: self.Hz_io(r,y,grid=grid) / np.sqrt(self.total_power)
 
             self.x            = x
         elif self.coordinates == wmm.CYLINDRICAL:
             #self.Eps_r          = interpolate.RectBivariateSpline(r, y, np.real(Eps))
             #self.Eps_i          = interpolate.RectBivariateSpline(r, y, np.imag(Eps))
 
-            self.Er_r           = interpolate.RectBivariateSpline(r, y, np.real(Er))
-            self.Er_i           = interpolate.RectBivariateSpline(r, y, np.imag(Er))
+            self.Er_ro           = interpolate.RectBivariateSpline(r, y, np.real(Er))
+            self.Er_io           = interpolate.RectBivariateSpline(r, y, np.imag(Er))
+            self.Er_r = lambda r,y,grid=True: self.Er_ro(r,y,grid=grid) / np.sqrt(self.total_power)
+            self.Er_i = lambda r,y,grid=True: self.Er_io(r,y,grid=grid) / np.sqrt(self.total_power)
 
-            self.Ey_r           = interpolate.RectBivariateSpline(r, y, np.real(Ey))
-            self.Ey_i           = interpolate.RectBivariateSpline(r, y, np.imag(Ey))
+            self.Ey_ro           = interpolate.RectBivariateSpline(r, y, np.real(Ey))
+            self.Ey_io           = interpolate.RectBivariateSpline(r, y, np.imag(Ey))
+            self.Ey_r = lambda r,y,grid=True: self.Ey_ro(r,y,grid=grid) / np.sqrt(self.total_power)
+            self.Ey_i = lambda r,y,grid=True: self.Ey_io(r,y,grid=grid) / np.sqrt(self.total_power)
 
-            self.Ephi_r         = interpolate.RectBivariateSpline(r, y, np.real(Ephi))
-            self.Ephi_i         = interpolate.RectBivariateSpline(r, y, np.imag(Ephi))
+            self.Ephi_ro         = interpolate.RectBivariateSpline(r, y, np.real(Ephi))
+            self.Ephi_io         = interpolate.RectBivariateSpline(r, y, np.imag(Ephi))
+            self.Ephi_r = lambda r,y,grid=True: self.Ephi_ro(r,y,grid=grid) / np.sqrt(self.total_power)
+            self.Ephi_i = lambda r,y,grid=True: self.Ephi_io(r,y,grid=grid) / np.sqrt(self.total_power)
 
-            self.Hr_r           = interpolate.RectBivariateSpline(r, y, np.real(Hr))
-            self.Hr_i           = interpolate.RectBivariateSpline(r, y, np.imag(Hr))
+            self.Hr_ro           = interpolate.RectBivariateSpline(r, y, np.real(Hr))
+            self.Hr_io           = interpolate.RectBivariateSpline(r, y, np.imag(Hr))
+            self.Hr_r = lambda r,y,grid=True: self.Hr_ro(r,y,grid=grid) / np.sqrt(self.total_power)
+            self.Hr_i = lambda r,y,grid=True: self.Hr_io(r,y,grid=grid) / np.sqrt(self.total_power)
 
-            self.Hy_r           = interpolate.RectBivariateSpline(r, y, np.real(Hy))
-            self.Hy_i           = interpolate.RectBivariateSpline(r, y, np.imag(Hy))
+            self.Hy_ro           = interpolate.RectBivariateSpline(r, y, np.real(Hy))
+            self.Hy_io           = interpolate.RectBivariateSpline(r, y, np.imag(Hy))
+            self.Hy_r = lambda r,y,grid=True: self.Hy_ro(r,y,grid=grid) / np.sqrt(self.total_power)
+            self.Hy_i = lambda r,y,grid=True: self.Hy_io(r,y,grid=grid) / np.sqrt(self.total_power)
 
-            self.Hphi_r         = interpolate.RectBivariateSpline(r, y, np.real(Hphi))
-            self.Hphi_i         = interpolate.RectBivariateSpline(r, y, np.imag(Hphi))
+            self.Hphi_ro         = interpolate.RectBivariateSpline(r, y, np.real(Hphi))
+            self.Hphi_io         = interpolate.RectBivariateSpline(r, y, np.imag(Hphi))
+            self.Hphi_r = lambda r,y,grid=True: self.Hphi_ro(r,y,grid=grid) / np.sqrt(self.total_power)
+            self.Hphi_i = lambda r,y,grid=True: self.Hphi_io(r,y,grid=grid) / np.sqrt(self.total_power)
+
             self.r            = r
         else:
             raise ValueError('Invalid coordinate system defined!')
 
         # Get the power of the modes
-        print('calculating TE power')
-        self.calc_TE_power()
-        print('calculating TM power')
-        self.calc_TM_power()
-        print('calculating total power')
-        self.calc_total_power()
+        self.TE_power = self.calc_TE_power()
+        self.TM_power = self.calc_TM_power()
+        self.total_power = self.calc_total_power()
+        print("Total power: {:e}".format(self.total_power))
 
         # Get the normalizing factor
         self.nrm    = 1
@@ -167,6 +191,7 @@ class Mode:
                 z = np.reshape(z,(1,-1))
             return (self.Ex_r(x,y,grid=grid) + 1j*self.Ex_i(x,y,grid=grid)) * \
                 np.exp(-1j*self.beta*z)
+
         elif self.coordinates == wmm.CYLINDRICAL:
             X,Y,Z = np.meshgrid(x,y,z,sparse=True, indexing='ij')
             R     = np.sqrt(X ** 2 + Z ** 2) - self.radius
@@ -325,26 +350,27 @@ class Mode:
 	# TE part
     def calc_TE_power(self):
         if self.coordinates == wmm.CARTESIAN:
-            f = lambda y, x: self.Ey(x,y) * self.Hx(x,y).conj()
+            f = lambda y, x: (self.Ey_r(x,y) + self.Ey_i(x,y)) *\
+                    (self.Hx_r(x,y) + self.Hx_i(x,y)).conj()
             xmin = self.x[0]; xmax = self.x[-1];
         elif self.coordinates == wmm.CYLINDRICAL:
             f = lambda y, r: (self.Ey_r(r,y) + self.Ey_i(r,y)) *\
-                        (self.Hr_r(r,y) + self.Hr_i(r,y)).conj()
+                    (self.Hr_r(r,y) + self.Hr_i(r,y)).conj()
             xmin = self.r[0]; xmax = self.r[-1];
         else:
             raise ValueError('Invalid coordinate system defined!')
         ymin = self.y[0]; ymax = self.y[-1];
 
         intResults = wmm.complex_quadrature(f, xmin, xmax, ymin, ymax)
-        self.TE_power = -0.5 * intResults
-        print(self.TE_power)
+        return -0.5 * intResults
 
 	# longitudinal component of the Poyntingvector,
 	# integrated over the entire x-y-domain
 	# TM part
     def calc_TM_power(self):
         if self.coordinates == wmm.CARTESIAN:
-            f = lambda y, x: self.Ex(x,y) * self.Hy(x,y).conj()
+            f = lambda y, x: (self.Ex_r(x,y) + self.Ex_i(x,y)) *\
+                    (self.Hy_r(x,y) + self.Hy_i(x,y)).conj()
             xmin = self.x[0]; xmax = self.x[-1];
         elif self.coordinates == wmm.CYLINDRICAL:
             f = lambda y, r: (self.Er_r(r,y) + self.Er_i(r,y)) *\
@@ -355,12 +381,10 @@ class Mode:
         ymin = np.min(self.y); ymax = np.min(self.y[-1]);
 
         intResults = wmm.complex_quadrature(f, xmin, xmax, ymin, ymax)
-        self.TM_power = 0.5 * intResults
-        print(self.TM_power)
+        return 0.5 * intResults
 
     def calc_total_power(self):
-        self.total_power = self.TM_power + self.TE_power
-        print(self.total_power)
+        return np.abs(np.real(self.calc_TM_power() + self.calc_TM_power()))
 
     def getPhasor(self,z):
         z = z-self.zCenter
@@ -371,9 +395,6 @@ class Mode:
                 theta = 0
             else:
                 theta = np.pi/2 - np.arccos(z/self.radius)
-            print('theta')
-            print(z)
-            print(theta)
             return np.exp(-1j*self.beta*self.radius*theta)
         else:
             raise ValueError('Invalid coordinate system!')
