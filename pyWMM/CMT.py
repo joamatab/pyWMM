@@ -90,12 +90,6 @@ def CMTsetup(modeList,xmin,xmax,ymin,ymax,z=0):
     Mss = S[1,1]
     Q[1,0] =  Msb / Mss * Q[1,1]
     result = np.matmul(linalg.pinv(S), C)
-    print('=======================================')
-    print(z)
-    print(np.abs(S))
-    print(np.abs(result))
-    print(np.abs(Q))
-    print('=======================================')
     return result, Q
 
 def getCrossSection(modeList,x,y,z=0):
