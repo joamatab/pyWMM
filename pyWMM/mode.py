@@ -32,7 +32,7 @@ class Mode:
                  Ex = None, Ey = None, Ez = None, Er = None, Ephi = None,
                  Hx = None, Hy = None, Hz = None, Hr = None, Hphi = None,
                  x = None, y = None, r = None, radius = None,
-                 pol = None, neff = None
+                 pol = None, neff = None, rc = 0
                  ):
 
         #Initialize all the other variables
@@ -48,6 +48,7 @@ class Mode:
         self.waveguideThickness = waveguideThickness
         self.claddingEps = claddingEps
         self.coreEps = coreEps
+        self.rc = 0
 
         # Set waveguide's center
         self.xCenter = center[0]
@@ -147,7 +148,6 @@ class Mode:
         self.TE_power = self.calc_TE_power()
         self.TM_power = self.calc_TM_power()
         self.total_power = self.calc_total_power()
-        print("Total power: {:e}".format(self.total_power))
 
         # Get the normalizing factor
         self.nrm    = 1
@@ -162,8 +162,11 @@ class Mode:
         if self.coordinates == wmm.CARTESIAN:
             X,Y,Z = np.meshgrid(x,y,z,indexing='ij')
             epsFunc = np.ones((x.size,y.size,z.size)) * self.claddingEps
-            coreIndex = ((X >= -self.waveguideWidth/2) & (X < self.waveguideWidth/2)
-                    & (Y >= -self.waveguideThickness/2) & (Y < self.waveguideThickness/2))
+            if self.rc == 0:
+                coreIndex = ((X >= -self.waveguideWidth/2) & (X < self.waveguideWidth/2)
+                        & (Y >= -self.waveguideThickness/2) & (Y < self.waveguideThickness/2))
+            else:
+                coreIndex = (2*np.abs(X)/self.waveguideWidth) ** (self.waveguideWidth/self.rc) + (2*np.abs(Y)/(self.waveguideThickness)) ** (self.waveguideThickness/self.rc) <= 1
             epsFunc[coreIndex] = self.coreEps
             return np.squeeze(epsFunc)
             '''

@@ -11,19 +11,22 @@ from scipy import io as sio
 # ---------------------------------------------------------------------------- #
 
 modeNumber       = 0
-straightFilename = '../straight_data/fixedsweepData.npz'
-bentFilename     = '../bend10_data/fixedsweepData.npz'
+straightFilename = '../test_batch/test_batchsweepData.npz'
+bentFilename     = '../test_batch/test_batchsweepData.npz'
 radius           = 10
 output_folder    = ''
 coreEps          = 9
 claddingEps      = 4
 gap              = 0.2
 
+width_bent       = 0.5
+thickness_bent   = 0.22
+
 nRange  = int(1e3)
 nz = int(500)
 zmin = -5
 zmax = 5
-xmin = -5
+xmin = -3
 xmax = 1
 ymin = -1
 ymax = 1
@@ -47,9 +50,7 @@ Hr_bent          = npzfileBent['Hr']
 Hy_bent          = npzfileBent['Hz']
 Hphi_bent        = npzfileBent['Hphi']
 lambdaSweep_bent = npzfileBent['lambdaSweep']
-waveNumbers_bent = npzfileBent['waveNumbers'].conj()
-width_bent       = 0.5
-thickness_bent   = 0.22
+waveNumbers_bent = npzfileBent['waveNumbers']
 
 # ---------- Straight data --------- #
 npzfileStraight      = np.load(straightFilename)
@@ -61,15 +62,12 @@ Ez_straight          = npzfileStraight['Ephi']
 Hx_straight          = npzfileStraight['Hr']
 Hy_straight          = npzfileStraight['Hz']
 Hz_straight          = npzfileStraight['Hphi']
+Eps_straight          = npzfileStraight['Eps']
 lambdaSweep_straight = npzfileStraight['lambdaSweep']
-waveNumbers_straight = (npzfileStraight['waveNumbers'].conj())
+waveNumbers_straight = npzfileStraight['waveNumbers']
 width_straight       = 0.5
 thickness_straight   = 0.22
 
-print('==========')
-print(waveNumbers_bent[:,2] * lambdaSweep_bent / (2*np.pi))
-print(waveNumbers_straight[:,2] * lambdaSweep_straight / (2*np.pi))
-print('==========')
 # ---------------------------------------------------------------------------- #
 # Run sweep
 # ---------------------------------------------------------------------------- #
@@ -115,11 +113,21 @@ for iter in range(numWavelength):
                            y                  = y_straight
                        )
     modeList = [wgBent,wgStraight]
-    print(wgBent.calc_total_power())
-    print(wgStraight.calc_total_power())
-    # ---------------------------------------------------------------------------- #
+    # ------------------------------------------------------------------------ #
     # Visualize
-    # ---------------------------------------------------------------------------- #
+    # ------------------------------------------------------------------------ #
+    plt.figure()
+    xTemp = np.linspace(-1,1,1000)
+    yTemp = np.linspace(-1,1,1000)
+    Eps_straight
+    plt.imshow(np.real(np.rot90(wgStraight.Eps(xTemp,y=yTemp,z=0))),extent = (-1,1,-1,1),origin='lower' )
+    #plt.imshow(np.abs(np.rot90(Eps_straight)),extent = (x_straight[0],x_straight[-1],y_straight[0],y_straight[-1]),origin='lower')
+    #plt.imshow(np.abs(np.rot90(Ex_straight[iter,modeNumber,:,:])) ** 2,extent = (x_straight[0],x_straight[-1],y_straight[0],y_straight[-1]),origin='lower',vmax=10  )
+    #plt.imshow(np.abs(np.rot90(wgStraight.Ez(xTemp,y=yTemp,z=0))) ** 2,extent = (-1,1,-1,1),origin='lower' )
+    plt.colorbar()
+    plt.savefig('resolution.png')
+
+    quit()
     plt.figure()
 
     plt.subplot(2,2,1)
@@ -179,6 +187,11 @@ for iter in range(numWavelength):
     plt.tight_layout()
     plt.savefig('threeD_view.png')
     quit()
+
+    # ------------------------------------------------------------------------ #
+    # Run solver
+    # ------------------------------------------------------------------------ #
+
     A0   = np.squeeze(np.array([1,0]))
     M    = CMT.CMTsetup(modeList,xmin,xmax,ymin,ymax)
     func = lambda zFunc: CMT.CMTsetup(modeList,xmin,xmax,ymin,ymax,zFunc)
